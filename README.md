@@ -8,19 +8,17 @@ Your original code is never touched. All changes go to the `_gex` clone.
 
 ```bash
 # Single file (primary mode)
-python3 gex.py --scan ./myproject --file src/auth.py
+python3 _Gex.py --scan ./myproject --file src/auth.py
 
 # Single file with focus
-python3 gex.py --scan ./myproject --file src/auth.py --focus "fix the login bug"
+python3 _Gex.py --scan ./myproject --file src/auth.py --focus "fix the login bug"
 
 # Full repo scan
-python3 gex.py --scan ./myproject
+python3 _Gex.py --scan ./myproject
 
 # Dry run (analyze without applying)
-python3 gex.py --scan ./myproject --file src/auth.py --dry-run
+python3 _Gex.py --scan ./myproject --file src/auth.py --dry-run
 
-# List AiAS workspaces
-python3 gex.py --list-workspaces
 ```
 
 ## How It Works
@@ -83,7 +81,7 @@ All configuration is via environment variables:
 ## CLI Options
 
 ```
-python3 gex.py [OPTIONS]
+python3 _Gex.py [OPTIONS]
 
 Options:
   --scan PATH          Path to repo or directory to scan
@@ -113,7 +111,7 @@ Each run produces:
 The ultimate test — run Gex on itself:
 
 ```bash
-python3 gex.py --scan . --file gex.py --focus "bugs, edge cases, and robustness"
+python3 _Gex.py --scan . --file gex.py --focus "bugs, edge cases, and robustness"
 ```
 
 ## Requirements
