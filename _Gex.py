@@ -839,11 +839,7 @@ if __name__ == "__main__":
         MODEL = args.model
     if args.provider:
         PROVIDER = args.provider
-        if PROVIDER:
-            auth_headers["X-AiAssist-Provider"] = PROVIDER
-        elif "X-AiAssist-Provider" in auth_headers:
-            del auth_headers["X-AiAssist-Provider"]
-
+        auth_headers["X-AiAssist-Provider"] = PROVIDER
     if args.sweep:
         run_sweep(args.sweep, focus=args.focus, dry_run=args.dry_run)
     elif args.scan:
