@@ -117,7 +117,7 @@ def send_to_llm(client: httpx.Client, system_prompt: str, user_msg: str) -> str:
             {"role": "user", "content": user_msg},
         ],
         "temperature": 0.3,
-        "max_tokens": 33333,
+        "max_tokens": 16384, 
     }
     resp = client.post(f"{API_BASE}/v1/chat/completions", json=payload, headers=auth_headers, timeout=120)
     resp.raise_for_status()
