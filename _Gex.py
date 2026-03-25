@@ -33,7 +33,7 @@ from datetime import datetime
 from typing import Optional
 
 API_BASE = os.getenv("AIAS_API_URL", "https://api.aiassist.net")
-API_KEY = os.getenv("AIAS_API_KEY", "aai_08Yje_4t11_r4zxMMxOWymYht5pbx2ASvRwJB0wKasc")
+API_KEY = os.getenv("AIAS_API_KEY", "aai_YOUR_AIAS_KEY")
 MODEL = os.getenv("AIAS_MODEL", "moonshotai/kimi-k2-instruct")
 PROVIDER = os.getenv("AIAS_PROVIDER", "groq")
 
