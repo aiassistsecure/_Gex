@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gex — AI Code Surgeon by AiAssist Secure (AiAssist.net)
+Gex — AI Code Surgeon
 Scans source code, clones the repo to a parallel directory, asks the LLM
 for surgical fixes using <<<WRITE>>> / <<<PATCH>>> patterns, applies them
 to the clone, and posts a detailed summary to an AiAS workspace.
@@ -17,6 +17,7 @@ Usage:
   python gex.py --scan ./myproject --file src/auth.py
   python gex.py --scan ./myproject --file src/auth.py --focus "fix the login bug"
   python gex.py --scan ./myproject --dry-run
+  python gex.py --list-workspaces
 """
 
 import os
@@ -32,14 +33,14 @@ from datetime import datetime
 from typing import Optional
 
 API_BASE = os.getenv("AIAS_API_URL", "https://api.aiassist.net")
-API_KEY = os.getenv("AIAS_API_KEY", "aai_YOUR_AIAS_KEY")
+API_KEY = os.getenv("AIAS_API_KEY", "aai_08Yje_4t11_r4zxMMxOWymYht5pbx2ASvRwJB0wKasc")
 MODEL = os.getenv("AIAS_MODEL", "moonshotai/kimi-k2-instruct")
 PROVIDER = os.getenv("AIAS_PROVIDER", "groq")
 
 SKIP_DIRS = {
     "node_modules", ".git", "__pycache__", "venv", ".venv",
     "dist", "build", ".next", ".cache", "appendonlydir",
-    "redis-data", ".local", ".upm", "_gex",
+    "redis-data", ".local", ".replit", ".upm", "_gex",
 }
 SKIP_FILES = {
     "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
@@ -534,42 +535,318 @@ def run_gex(repo_path: str, focus: str = None, focus_file: str = None, dry_run: 
     return str(report_path)
 
 
-def list_workspaces():
+SWEEP_FILE_PRIORITY = {
+    "main": 1, "app": 1, "index": 1, "server": 1, "manage": 1,
+    "route": 2, "router": 2, "api": 2, "view": 2, "endpoint": 2, "handler": 2,
+    "service": 3, "controller": 3, "middleware": 3, "auth": 3,
+    "model": 4, "schema": 4, "migration": 4, "db": 4, "database": 4,
+    "util": 5, "helper": 5, "lib": 5, "common": 5, "config": 5,
+    "component": 6, "page": 6, "layout": 6, "template": 6,
+    "test": 8, "spec": 8,
+}
+
+SWEEP_MAX_FILE_CHARS = 30_000
+SWEEP_CHUNK_LINES = 400
+
+
+def _prioritize_files(files: list[dict]) -> list[dict]:
+    def score(f):
+        name = Path(f["path"]).stem.lower()
+        for keyword, pri in SWEEP_FILE_PRIORITY.items():
+            if keyword in name:
+                return pri
+        return 7
+    return sorted(files, key=score)
+
+
+def _chunk_file(f: dict) -> list[dict]:
+    content = f.get("content", "")
+    if len(content) <= SWEEP_MAX_FILE_CHARS:
+        return [f]
+
+    lines = content.split("\n")
+    chunks = []
+    for start in range(0, len(lines), SWEEP_CHUNK_LINES):
+        end = min(start + SWEEP_CHUNK_LINES, len(lines))
+        chunk_content = "\n".join(lines[start:end])
+        chunk_lines = end - start
+        label = f"{f['path']} [lines {start+1}-{end}]"
+        chunks.append({
+            "path": f["path"],
+            "chunk_label": label,
+            "size": len(chunk_content),
+            "content": chunk_content,
+            "lines": chunk_lines,
+            "chunk_start": start + 1,
+            "chunk_end": end,
+        })
+    return chunks
+
+
+SWEEP_SYSTEM_PROMPT = """You are Gex, an expert code surgeon performing a sweep — fixing one file at a time across an entire codebase.
+
+You are given:
+1. The full file tree (read-only context, so you understand the project)
+2. A single target file to fix (with line numbers)
+
+Focus ONLY on the target file. Do not suggest changes to other files.
+
+You MUST use these exact block formats for ALL code changes:
+
+## <<<WRITE:path/to/file>>>
+Use for FULL rewrites (>50% of file changes). Write the complete file content.
+```
+<<<WRITE:src/utils/helper.py>>>
+def helper():
+    return "fixed"
+<<<END>>>
+```
+
+## <<<PATCH:path/to/file>>>
+Use for TARGETED edits (1-30 lines changing). JSON array of operations:
+```
+<<<PATCH:src/auth.py>>>
+[
+  {"action": "replace", "start_line": 15, "end_line": 20, "content": "    return validate(token)"},
+  {"action": "insert", "start_line": 5, "content": "import hashlib"},
+  {"action": "delete", "start_line": 42, "end_line": 45}
+]
+<<<END>>>
+```
+
+### Rules:
+1. Reference EXACT line numbers from the numbered source
+2. Keep patches minimal — only fix what's broken
+3. Never use placeholders like "// rest of code here"
+4. If the file looks clean, say "No issues found" and skip the blocks
+5. End with a brief ## Summary"""
+
+
+def run_sweep(repo_path: str, focus: str = None, dry_run: bool = False):
+    import time as _time
+
+    print(f"\n{'='*60}")
+    print(f"  Gex — Sweep Mode (Codebase Roomba)")
+    print(f"  Repo:  {repo_path}")
+    print(f"  Model: {PROVIDER}/{MODEL}")
+    if focus:
+        print(f"  Focus: {focus}")
+    if dry_run:
+        print(f"  Mode:  DRY RUN")
+    print(f"{'='*60}\n")
+
     if not API_KEY:
         print("[!] AIAS_API_KEY not set.")
         sys.exit(1)
+
+    print("[1/5] Scanning codebase...")
+    all_files = scan_tree(repo_path)
+    print(f"       Found {len(all_files)} source file(s)")
+    if not all_files:
+        print("[!] No source files found.")
+        sys.exit(1)
+
+    tree = build_tree_summary(all_files)
+    prioritized = _prioritize_files(all_files)
+
+    print("[2/5] Cloning repository...")
+    if dry_run:
+        clone_path = None
+        print("       [DRY RUN] Skipping clone")
+    else:
+        clone_path = clone_repo(repo_path)
+
     client = httpx.Client()
-    resp = client.get(f"{API_BASE}/api/user/workspaces", headers=auth_headers)
-    if resp.status_code == 401:
-        print("[!] 401 — workspace listing requires session auth (not supported via API key alone).")
-        print("    Use the AiAS dashboard to view workspaces, or check workspace IDs from Gex run output.")
-        client.close()
-        return
-    resp.raise_for_status()
-    workspaces = resp.json()
-    print(f"\n  AiAS Workspaces ({len(workspaces)} total)\n")
-    for ws in workspaces:
-        name = ws.get("name", "Unnamed")
-        wid = ws.get("id", "?")
-        mode = ws.get("mode", "?")
-        print(f"  [{mode:>8}] {name}")
-        print(f"            ID: {wid}")
-    print()
+    all_results = []
+    all_llm_outputs = []
+    files_fixed = 0
+    files_clean = 0
+    files_errored = 0
+    total_start = _time.time()
+
+    print(f"[3/5] Sweeping {len(prioritized)} files...\n")
+
+    for idx, f in enumerate(prioritized, 1):
+        filepath = f["path"]
+        file_lines = f.get("lines", "?")
+        print(f"  [{idx}/{len(prioritized)}] {filepath} ({file_lines} lines)")
+
+        chunks = _chunk_file(f)
+        file_had_patches = False
+
+        for chunk in chunks:
+            chunk_label = chunk.get("chunk_label", filepath)
+            if len(chunks) > 1:
+                print(f"           chunk: lines {chunk.get('chunk_start')}-{chunk.get('chunk_end')}")
+
+            numbered = "\n".join(
+                f"{i+1:>4}| {line}"
+                for i, line in enumerate(chunk["content"].split("\n"))
+            )
+            if chunk.get("chunk_start", 1) > 1:
+                numbered = "\n".join(
+                    f"{chunk['chunk_start']+i:>4}| {line}"
+                    for i, line in enumerate(chunk["content"].split("\n"))
+                )
+
+            focus_block = f"\n\n**Sweep focus**: {focus}" if focus else ""
+            user_msg = f"""## Project File Tree
+{tree}
+
+## Target File: {chunk_label}
+```
+{numbered}
+```
+{focus_block}
+
+Fix any issues in this file. Be precise with line numbers. If the file is clean, say "No issues found."
+"""
+
+            try:
+                llm_output = send_to_llm(client, SWEEP_SYSTEM_PROMPT, user_msg)
+                all_llm_outputs.append(f"### {chunk_label}\n\n{llm_output}")
+            except httpx.HTTPStatusError as e:
+                print(f"           [ERROR] LLM failed: {e.response.status_code}")
+                files_errored += 1
+                all_llm_outputs.append(f"### {chunk_label}\n\n[ERROR: {e.response.status_code}]")
+                continue
+            except Exception as e:
+                print(f"           [ERROR] {e}")
+                files_errored += 1
+                continue
+
+            blocks = parse_surgical_blocks(llm_output)
+
+            if not blocks:
+                if not file_had_patches:
+                    print(f"           clean")
+                continue
+
+            file_had_patches = True
+
+            if dry_run:
+                for b in blocks:
+                    action = b["action"].upper()
+                    detail = f"{len(b.get('content', ''))} chars" if b["action"] == "write" else f"{len(b.get('operations', []))} ops"
+                    print(f"           {action}  {b['path']}  ({detail})")
+                    all_results.append({"path": b["path"], "action": action, "status": "dry_run", "detail": detail})
+            elif clone_path:
+                results = apply_blocks_to_clone(clone_path, blocks)
+                for r in results:
+                    print(f"           {r['action']}  {r['status']}  {r['detail']}")
+                all_results.extend(results)
+
+        if file_had_patches:
+            files_fixed += 1
+        elif not file_had_patches and filepath not in [r["path"] for r in all_results if r.get("status") == "error"]:
+            files_clean += 1
+
+    elapsed = _time.time() - total_start
+
+    print(f"\n[4/5] Generating sweep report...")
+    repo_name = Path(repo_path).resolve().name
+    applied = [r for r in all_results if r["status"] == "applied"]
+
+    changes_detail = ""
+    for r in all_results:
+        icon = "+" if r["status"] == "applied" else "!" if r["status"] == "error" else "~"
+        changes_detail += f"  [{icon}] {r['action']:5}  {r['path']}  — {r['detail']}\n"
+
+    llm_combined = "\n\n---\n\n".join(all_llm_outputs)
+
+    report = f"""# Gex Sweep Report
+**Repo**: `{repo_name}`
+{f'**Clone**: `{Path(clone_path).name}/`' if clone_path else ''}
+**Date**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Model**: `{PROVIDER}/{MODEL}`
+**Duration**: {elapsed:.1f}s
+{f'**Focus**: {focus}' if focus else ''}
+
+## Stats
+| Metric | Count |
+|--------|-------|
+| Files scanned | {len(all_files)} |
+| Files fixed | {files_fixed} |
+| Files clean | {files_clean} |
+| Files errored | {files_errored} |
+| Patches applied | {len(applied)} |
+| Total patches | {len(all_results)} |
+
+---
+
+## Changes
+
+{changes_detail if changes_detail else '  (no changes)'}
+
+---
+
+## Per-File Analysis
+
+{llm_combined}
+
+---
+*Generated by Gex Sweep — AI Codebase Roomba*
+"""
+
+    report_dir = Path(repo_path) / "reports"
+    report_dir.mkdir(exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = report_dir / f"gex_sweep_{repo_name}_{timestamp}.md"
+    report_path.write_text(report)
+    print(f"       Report saved: {report_path}")
+
+    print("[5/5] Uploading to workspace...")
+    ws_name = f"Gex Sweep: {repo_name} ({datetime.now().strftime('%m/%d %H:%M')})"
+    ws_result = create_workspace(client, ws_name)
+    if ws_result:
+        ws_id = ws_result.get("id", ws_result.get("workspace", {}).get("id", ""))
+        if ws_id:
+            store_in_workspace(client, ws_id, report)
+            print(f"       Workspace: {ws_name}")
+            print(f"       Workspace ID: {ws_id}")
+        else:
+            print("[!] Workspace created but no ID returned")
+    else:
+        print("       [!] Workspace upload failed — report saved locally")
+
     client.close()
+
+    print(f"\n{'='*60}")
+    print(f"  Gex Sweep Complete!")
+    print(f"  Duration:  {elapsed:.1f}s")
+    print(f"  Files:     {files_fixed} fixed, {files_clean} clean, {files_errored} errors")
+    print(f"  Patches:   {len(applied)} applied, {len(all_results) - len(applied)} skipped")
+    print(f"  Report:    {report_path}")
+    if clone_path:
+        print(f"  Clone:     {clone_path}")
+    print(f"{'='*60}\n")
+
+    return str(report_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Gex — AI Code Surgeon")
-    parser.add_argument("--scan", type=str, help="Path to repo/directory to scan")
-    parser.add_argument("--file", type=str, help="Focus on a specific file path")
-    parser.add_argument("--focus", type=str, help="Focus area (e.g. 'fix auth bug', 'optimize queries')")
+    parser.add_argument("--scan", type=str, help="Path to repo/directory to scan (single-file or multi-file)")
+    parser.add_argument("--sweep", type=str, help="Sweep an entire repo file-by-file (Roomba mode)")
+    parser.add_argument("--file", type=str, help="Focus on a specific file path (use with --scan)")
+    parser.add_argument("--focus", type=str, help="Focus area (e.g. 'security', 'error handling', 'performance')")
+    parser.add_argument("--model", type=str, help="LLM model (e.g. gpt-5.4, moonshotai/kimi-k2-instruct)")
+    parser.add_argument("--provider", type=str, help="LLM provider (groq, openai, anthropic, gemini, mistral)")
     parser.add_argument("--dry-run", action="store_true", help="Analyze and show patches without applying")
-    parser.add_argument("--list-workspaces", action="store_true", help="List AiAS workspaces")
 
     args = parser.parse_args()
 
-    if args.list_workspaces:
-        list_workspaces()
+    if args.model:
+        MODEL = args.model
+    if args.provider:
+        PROVIDER = args.provider
+        if PROVIDER:
+            auth_headers["X-AiAssist-Provider"] = PROVIDER
+        elif "X-AiAssist-Provider" in auth_headers:
+            del auth_headers["X-AiAssist-Provider"]
+
+    if args.sweep:
+        run_sweep(args.sweep, focus=args.focus, dry_run=args.dry_run)
     elif args.scan:
         run_gex(args.scan, focus=args.focus, focus_file=args.file, dry_run=args.dry_run)
     else:
