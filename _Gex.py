@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gex — AI Code Surgeon by AiAssist Secure (AiAssist.net)
+_Gex — AI Code Surgeon by AiAssist Secure (AiAssist.net)
 Scans source code, clones the repo to a parallel directory, asks the LLM
 for surgical fixes using <<<WRITE>>> / <<<PATCH>>> patterns, applies them
 to the clone, and posts a detailed summary to an AiAS workspace.
@@ -13,11 +13,10 @@ Surgical edit patterns (Keystone-lite):
   <<<END>>>                  — terminates a WRITE or PATCH block
 
 Usage:
-  python gex.py --scan ./myproject
-  python gex.py --scan ./myproject --file src/auth.py
-  python gex.py --scan ./myproject --file src/auth.py --focus "fix the login bug"
-  python gex.py --scan ./myproject --dry-run
-  python gex.py --list-workspaces
+  python _Gex.py --scan ./myproject
+  python _Gex.py --scan ./myproject --file src/auth.py
+  python _Gex.py --scan ./myproject --file src/auth.py --focus "fix the login bug"
+  python _Gex.py --scan ./myproject --dry-run
 """
 
 import os
