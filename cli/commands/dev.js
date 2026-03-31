@@ -46,8 +46,10 @@ export async function dev(options) {
   // ── 1. YOUR APP's Python Backend ──
   const backendDir = path.join(cwd, 'backend');
   if (fs.existsSync(backendDir)) {
+    const pythonExe = await ensureVenv(backendDir, 'app:py', chalk.blue);
     console.log(chalk.blue(`  [app:py]   Starting Python backend on :${appPort}`));
-    const pyProc = spawn('python', [
+    
+    const pyProc = spawn(pythonExe, [
       '-m', 'uvicorn', 'app:app',
       '--host', '127.0.0.1',
       '--port', String(appPort),
@@ -80,8 +82,10 @@ export async function dev(options) {
   // ── 3. GEX IDE API (Code Surgery Engine) ──
   const gexApiDir = path.join(GENE_ROOT, '_Gex_API');
   if (fs.existsSync(gexApiDir)) {
+    const gexPythonExe = await ensureVenv(gexApiDir, 'gex:api', chalk.cyan);
     console.log(chalk.cyan(`  [gex:api]  Starting Gex engine on :${gexApiPort}`));
-    const gexApiProc = spawn('python', [
+    
+    const gexApiProc = spawn(gexPythonExe, [
       '-m', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
       '--port', String(gexApiPort),
@@ -169,6 +173,56 @@ export async function dev(options) {
 }
 
 // ── Helpers ──
+
+async function ensureVenv(dir, label, colorFn) {
+  const venvDir = path.join(dir, '.venv');
+  const pythonPath = getVenvPath(venvDir);
+
+  if (!fs.existsSync(pythonPath)) {
+    console.log(colorFn(`  [${label}]   Creating virtual environment...`));
+    try {
+      // Try 'python', then 'python3', then 'py -3' (Windows)
+      let pyCommand = 'python';
+      try {
+        const { execSync } = await import('child_process');
+        execSync('python --version', { stdio: 'ignore' });
+      } catch {
+        try {
+          const { execSync } = await import('child_process');
+          execSync('python3 --version', { stdio: 'ignore' });
+          pyCommand = 'python3';
+        } catch {
+          pyCommand = 'py -3';
+        }
+      }
+
+      const { spawnSync } = await import('child_process');
+      spawnSync(pyCommand, ['-m', 'venv', '.venv'], { cwd: dir, shell: true });
+      
+      const newPyPath = getVenvPath(venvDir);
+      if (!fs.existsSync(newPyPath)) throw new Error('Venv creation failed');
+
+      // Install requirements if present
+      const reqPath = path.join(dir, 'requirements.txt');
+      if (fs.existsSync(reqPath)) {
+        console.log(colorFn(`  [${label}]   Installing dependencies...`));
+        spawnSync(newPyPath, ['-m', 'pip', 'install', '-r', 'requirements.txt'], { cwd: dir, shell: true });
+      }
+    } catch (err) {
+      console.error(chalk.red(`  [${label}]   Failed to create venv: ${err.message}`));
+      return 'python'; // Fallback to system python
+    }
+  }
+
+  return pythonPath;
+}
+
+function getVenvPath(venvDir) {
+  const isWin = process.platform === 'win32';
+  return isWin 
+    ? path.join(venvDir, 'Scripts', 'python.exe')
+    : path.join(venvDir, 'bin', 'python');
+}
 
 function prefixOutput(proc, label, colorFn) {
   const tag = colorFn(`  [${label}]`);
