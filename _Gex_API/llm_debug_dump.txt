@@ -1,3 +1,26 @@
+The file is structurally broken, not just buggy.
+
+Main issues I found:
+- The component never returns JSX.
+- The WebSocket `onopen` handler is missing its closing `};`, so the rest of the socket handlers are nested incorrectly.
+- The file ends with orphaned JSX starting at line 73, which makes the component invalid.
+- `WS_URL` is hardcoded to `ws://`, which breaks on HTTPS deployments.
+- `sendMessage()` can try to send while the socket is not open.
+- There are mojibake/encoding-corrupted UI strings.
+- `mobileNavOpen`, `appInfo`, `statusColor`, and `navItems` are defined but effectively unusable in the current broken render.
+
+Because the render section is truncated and the file is no longer valid React, the safest surgical fix here is a full rewrite of this file to restore a working app shell while preserving the intended behavior.
+
+Explanation:
+- I kept the existing state and API/WebSocket responsibilities.
+- I made the WebSocket URL protocol-aware.
+- I added fetch response validation.
+- I guarded WebSocket cleanup to avoid stale updates.
+- I only send messages when the socket is actually open.
+- I replaced corrupted strings with clean text.
+- I restored a minimal but functional UI using the existing state.
+
+<<<WRITE:frontend/src/App.jsx>>>
 import { useState, useEffect, useRef } from 'react';
 
 const API_URL = '/api';
@@ -231,3 +254,14 @@ export default function App() {
     </div>
   );
 }
+<<<END>>>
+
+## Summary
+- Repaired the broken React component by restoring a valid `return` block.
+- Fixed the malformed WebSocket effect where `onopen` was never closed.
+- Replaced corrupted text strings with clean readable labels.
+- Made the WebSocket URL use `wss:` on HTTPS pages.
+- Added safer fetch handling for non-OK API responses.
+- Prevented sending messages unless the socket is actually open.
+- Added cleanup guards to avoid state updates after unmount.
+- Restored a functional UI for status, navigation, app info, and WebSocket messaging.

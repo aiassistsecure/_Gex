@@ -192,31 +192,29 @@ async def apply_patches(req: ApplyPatchesRequest):
         raise HTTPException(status_code=404, detail=f"File not found: {req.file_path}")
 
     try:
-        original = file_path.read_text(errors="replace")
+        original = file_path.read_text(encoding="utf-8", errors="replace")
         lines = original.split("\n")
 
-        # Sort accepted hunks by start line in reverse order
-        # so we can apply from bottom to top without offset issues
+        # Build list of hunks to apply from accepted indices
         accepted = []
         for idx in req.accepted_hunks:
             if idx < len(req.hunks):
                 accepted.append(req.hunks[idx])
 
-        # Sort by start line descending
-        accepted.sort(key=lambda h: h.get("start", 0), reverse=True)
+        # Apply bottom-up so earlier line numbers stay valid after each splice
+        accepted.sort(key=lambda h: h.get("start", 1), reverse=True)
 
         for hunk in accepted:
-            start = hunk.get("start", 1) - 1  # Convert to 0-indexed
-            end = hunk.get("end", start + 1) - 1
-            after_lines = hunk.get("after_lines", [])
+            # start is 1-indexed inclusive; convert to 0-indexed
+            start_0 = hunk.get("start", 1) - 1
+            before_lines = hunk.get("before_lines", [])
+            after_lines  = hunk.get("after_lines",  [])
 
-            # Replace the line range with the new content
-            if end >= start:
-                lines[start:end + 1] = after_lines
-            else:
-                lines.insert(start, *after_lines)
+            # The slice to remove is exactly start_0 .. start_0 + len(before_lines)
+            # This is always correct regardless of the "end" field.
+            end_0 = start_0 + len(before_lines)
+            lines[start_0:end_0] = after_lines
 
-        # Write back
         new_content = "\n".join(lines)
         file_path.write_text(new_content, encoding="utf-8")
 

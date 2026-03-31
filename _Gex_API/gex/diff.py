@@ -56,8 +56,8 @@ class DiffEngine:
                 continue
 
             hunks.append(DiffHunk(
-                start=i1 + 1,  # 1-indexed
-                end=max(i2, j2),
+                start=i1 + 1,   # 1-indexed, inclusive start in BEFORE file
+                end=i2,          # 1-indexed exclusive end in BEFORE file (i2 is already exclusive 0-indexed → same as 1-indexed count)
                 before_lines=before_block,
                 after_lines=after_block,
                 type=hunk_type,
