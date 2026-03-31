@@ -1020,6 +1020,10 @@ textarea.input {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(350%); }
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 /* ─── Utility ───────────────────────────────────────────────── */
 .mono { font-family: var(--font-mono); }

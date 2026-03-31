@@ -1,0 +1,19 @@
+{
+  "appName": "test-app",
+  "python": {
+    "port": 18764,
+    "wsPort": 18765,
+    "entrypoint": "backend/app.py"
+  },
+  "electron": {
+    "width": 1280,
+    "height": 800,
+    "devPort": 3000
+  },
+  "aiassist": {
+    "apiKey": "aai_WsrkQdSo0bl5gjeYnj4_oyaNBI-Pm7Dh4nt2S_h1OY8",
+    "provider": "groq",
+    "model": "moonshotai/kimi-k2-instruct"
+  },
+  "telemetry": false
+}
