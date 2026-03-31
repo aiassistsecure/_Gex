@@ -127,7 +127,8 @@ export default function RunPanel() {
           if (patched.length > 0) {
             addChat('assistant', `Agent concluded thinking. Found ${patched.length} file(s) to modify.\n\n${patched[0].llm_analysis || ''}`);
           } else if (errors.length > 0) {
-            addChat('assistant', `Agent finished but encountered errors in ${errors.length} file(s).`);
+            const firstErr = errors[0].error || 'Analysis failed.';
+            addChat('assistant', `Agent encountered errors in ${errors.length} file(s). First error: ${firstErr}`);
           } else {
             addChat('assistant', `Agent explored the repo and concluded that no changes are required.`);
           }

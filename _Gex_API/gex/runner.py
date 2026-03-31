@@ -138,6 +138,10 @@ class GexRunner:
                 yield message.get("content", "")
                 break
                 
+            # Sanitize: some proxies (like Gemini/Vertex) fail if 'content' is null in an assistant tool-call message.
+            if message.get("content") is None:
+                message["content"] = ""
+                
             messages.append(message)
             
             for tool_call in tool_calls:
@@ -245,10 +249,11 @@ End with a ## Summary of all changes."""
                     else:
                         llm_output += chunk + "\n"
             except httpx.HTTPStatusError as e:
+                error_detail = f"LLM Error {e.response.status_code}: {e.response.text}"
                 return FileResult(
                     file=file_path,
                     status="error",
-                    error=f"LLM request failed: {e.response.status_code}",
+                    error=error_detail,
                     before=before,
                 )
             except Exception as e:
@@ -436,6 +441,11 @@ End with a ## Summary of all changes."""
                 run_state.results.append(summary_result)
                 yield run_state, summary_result
 
+        except httpx.HTTPStatusError as e:
+            run_state.state = "failed"
+            run_state.error = f"API Error {e.response.status_code}: {e.response.text}"
+            run_state.completed_at = datetime.now()
+            yield run_state, None
         except Exception as e:
             run_state.state = "failed"
             run_state.error = str(e)
