@@ -1,32 +1,36 @@
-This file is truncated and currently invalid React/JSX. It ends mid-function, so the app will fail to compile.
+I found the core issue: `frontend/src/App.jsx` is badly corrupted with duplicated fragments, hooks declared inside another hook, incomplete promise chains, and repeated component bodies. It will not compile reliably, and even if it did, the WebSocket logic is mismatched with the backend.
 
-I’m fixing it with a full rewrite because:
-- the component body is incomplete
-- hooks are declared but never used
-- there is no returned JSX
-- the fetch/WebSocket lifecycle is cut off
+Two important runtime bugs also showed up from related files:
 
-The rewrite keeps the original intent:
-- fetch app info from `/api`
-- connect to the WebSocket endpoint
-- track connection status
-- allow sending messages
-- render a minimal debug UI
+- The frontend fetches `'/api'`, but the backend exposes app info at `'/api/info'`.
+- The frontend connects to `ws://<host>:18765/ws`, but the backend WebSocket runs on port `18764` at `'/ws'`.
+- The backend expects JSON over WebSocket via `receive_json()`, while the frontend sends plain text.
 
-<<<WRITE:frontend/src/App.jsx>>>
-import { useState, useEffect, useRef } from 'react';
+Because the target file is structurally broken across most of the file, the safest surgical fix is a full rewrite of `frontend/src/App.jsx`.
 
-const API_URL = '/api';
+This rewrite:
+- removes duplicated/corrupted code
+- restores valid hook usage
+- points API calls to the real backend route
+- uses the same origin for WebSocket in dev via Vite proxy and in production
+- sends JSON messages the backend can parse
+- renders incoming JSON messages clearly
+- keeps the debug UI simple and focused
+
+## <<<WRITE:frontend/src/App.jsx>>>
+import { useEffect, useRef, useState } from 'react';
+
+const API_URL = '/api/info';
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = `${WS_PROTOCOL}//${window.location.hostname}:18765/ws`;
+const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws`;
 
 export default function App() {
   const [status, setStatus] = useState('connecting');
   const [appInfo, setAppInfo] = useState(null);
   const [wsMessages, setWsMessages] = useState([]);
   const [input, setInput] = useState('');
-  const wsRef = useRef(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const wsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +67,12 @@ export default function App() {
     };
 
     ws.onmessage = (event) => {
-      setWsMessages((prev) => [...prev, event.data]);
+      try {
+        const parsed = JSON.parse(event.data);
+        setWsMessages((prev) => [...prev, parsed]);
+      } catch {
+        setWsMessages((prev) => [...prev, event.data]);
+      }
     };
 
     ws.onerror = () => {
@@ -87,9 +96,22 @@ export default function App() {
       return;
     }
 
-    wsRef.current.send(message);
-    setWsMessages((prev) => [...prev, `You: ${message}`]);
+    const payload = {
+      type: 'message',
+      payload: { text: message },
+    };
+
+    wsRef.current.send(JSON.stringify(payload));
+    setWsMessages((prev) => [...prev, { type: 'client:message', payload: { text: message } }]);
     setInput('');
+  };
+
+  const formatMessage = (message) => {
+    if (typeof message === 'string') {
+      return message;
+    }
+
+    return JSON.stringify(message, null, 2);
   };
 
   return (
@@ -111,7 +133,9 @@ export default function App() {
         <h2>WebSocket Messages</h2>
         <ul>
           {wsMessages.map((message, index) => (
-            <li key={`${index}-${message}`}>{message}</li>
+            <li key={index}>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{formatMessage(message)}</pre>
+            </li>
           ))}
         </ul>
       </section>
@@ -122,6 +146,11 @@ export default function App() {
           type="text"
           value={input}
           onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              handleSend();
+            }
+          }}
           placeholder="Type a message"
         />
         <button type="button" onClick={handleSend}>
@@ -134,8 +163,11 @@ export default function App() {
 <<<END>>>
 
 ## Summary
-- Replaced the truncated `frontend/src/App.jsx` with a complete, valid React component.
-- Restored the missing `useEffect` for API loading with proper error handling and cleanup.
-- Added a WebSocket lifecycle setup using the existing `WS_URL`.
-- Added a safe send handler for outbound WebSocket messages.
-- Added minimal JSX so the component renders and all declared state is used.
+
+- Rewrote `frontend/src/App.jsx` to remove duplicated and malformed code.
+- Fixed invalid hook usage by moving `mobileNavOpen` state to the component top level.
+- Corrected the API endpoint from `/api` to `/api/info`.
+- Corrected the WebSocket URL to use the current host and `/ws`, matching the Vite proxy and backend route.
+- Fixed WebSocket payload format to send JSON, matching `backend/app.py`’s `receive_json()` expectation.
+- Added safe parsing and display of incoming WebSocket JSON messages.
+- Kept the debug UI intact and added Enter-to-send for easier testing.

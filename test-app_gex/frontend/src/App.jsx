@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-const API_URL = '/api';
+const API_URL = '/api/info';
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = `${WS_PROTOCOL}//${window.location.hostname}:18765/ws`;
+const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws`;
 
 export default function App() {
   const [status, setStatus] = useState('connecting');
   const [appInfo, setAppInfo] = useState(null);
   const [wsMessages, setWsMessages] = useState([]);
   const [input, setInput] = useState('');
-  const wsRef = useRef(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const wsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +47,12 @@ export default function App() {
     };
 
     ws.onmessage = (event) => {
-      setWsMessages((prev) => [...prev, event.data]);
+      try {
+        const parsed = JSON.parse(event.data);
+        setWsMessages((prev) => [...prev, parsed]);
+      } catch {
+        setWsMessages((prev) => [...prev, event.data]);
+      }
     };
 
     ws.onerror = () => {
@@ -71,9 +76,22 @@ export default function App() {
       return;
     }
 
-    wsRef.current.send(message);
-    setWsMessages((prev) => [...prev, `You: ${message}`]);
+    const payload = {
+      type: 'message',
+      payload: { text: message },
+    };
+
+    wsRef.current.send(JSON.stringify(payload));
+    setWsMessages((prev) => [...prev, { type: 'client:message', payload: { text: message } }]);
     setInput('');
+  };
+
+  const formatMessage = (message) => {
+    if (typeof message === 'string') {
+      return message;
+    }
+
+    return JSON.stringify(message, null, 2);
   };
 
   return (
@@ -95,7 +113,9 @@ export default function App() {
         <h2>WebSocket Messages</h2>
         <ul>
           {wsMessages.map((message, index) => (
-            <li key={`${index}-${message}`}>{message}</li>
+            <li key={index}>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{formatMessage(message)}</pre>
+            </li>
           ))}
         </ul>
       </section>
@@ -106,6 +126,11 @@ export default function App() {
           type="text"
           value={input}
           onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              handleSend();
+            }
+          }}
           placeholder="Type a message"
         />
         <button type="button" onClick={handleSend}>
