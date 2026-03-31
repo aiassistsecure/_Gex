@@ -94,63 +94,81 @@ export default function RunPanel() {
 
     try {
       const { run_id } = await runRepo(repo.path, instruction);
-      addChat('system', `Agent is exploring the codebase...`);
+      addChat('system', 'Agent is exploring the codebase...');
 
-      let attempts = 0;
-      let lastToolIdx = 0;
+      await new Promise((resolve, reject) => {
+        const ws = new WebSocket(`ws://localhost:8000/api/run/ws/${run_id}/stream`);
 
-      while (attempts < 150) {
-        await new Promise(r => setTimeout(r, 2000));
-        attempts++;
+        ws.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
 
-        const status = await getRunStatus(run_id);
-        
-        // Show tool steps as they appear in 'current_file' (which we use as a log stream)
-        if (status.current_file && status.current_file.startsWith('[TOOL]')) {
-           // We'll avoid duplicates by checking the last message
-           setChatMessages(prev => {
-             if (prev[prev.length-1]?.content !== status.current_file) {
-               return [...prev, { role: 'tool', content: status.current_file, time: new Date() }];
-             }
-             return prev;
-           });
-        }
+          if (msg.type === 'tool_step') {
+            // Real-time tool call — stream each one as it fires
+            addChat('tool', msg.message);
 
-        if (status.state === 'completed' || status.state === 'failed') {
-          if (status.state === 'failed') {
-            addChat('assistant', `Scan failed: ${status.error}`);
-            failRun(status.error);
-            break;
-          }
+          } else if (msg.type === 'file_update') {
+            // A file result is ready — update progress
+            updateRunProgress(msg.progress ?? 0);
 
-          const results = status.results || [];
-          setResults(results);
-
-          const patched = results.filter(r => r.status === 'patched');
-          const errors = results.filter(r => r.status === 'error');
-
-          if (patched.length > 0) {
-            const first = patched[0];
-            const fullPath = `${repo.path}/${first.file}`.replace(/[\/]+/g, '/');
-            if (first.before !== undefined) {
-              setActiveFile(fullPath, first.before);
+          } else if (msg.type === 'run_complete') {
+            const state = msg.state;
+            if (state === 'failed') {
+              addChat('assistant', `Scan failed: ${msg.error || 'Unknown error'}`);
+              failRun(msg.error);
+              ws.close();
+              resolve();
+              return;
             }
-            setEditorMode('patches');
-            addChat('assistant',
-              `Agent concluded. ${patched.length} file(s) ready for review in PATCHES tab.` +
-              (patched.length > 1 ? `\n\nFiles: ${patched.map(r => r.file).join(', ')}` : '')
-            );
-          } else if (errors.length > 0) {
-            const firstErr = errors[0].error || 'Analysis failed.';
-            addChat('assistant', `Agent encountered errors in ${errors.length} file(s). First error: ${firstErr}`);
-          } else {
-            addChat('assistant', `Agent explored the repo and concluded that no changes are required.`);
-          }
 
-          completeRun();
-          break;
-        }
-      }
+            // Fetch the full results once complete
+            getRunStatus(run_id).then(status => {
+              const results = status.results || [];
+              setResults(results);
+
+              const patched = results.filter(r => r.status === 'patched');
+              const errors  = results.filter(r => r.status === 'error');
+
+              if (patched.length > 0) {
+                const first = patched[0];
+                const fullPath = `${repo.path}/${first.file}`.replace(/[\\/]+/g, '/');
+                if (first.before !== undefined) setActiveFile(fullPath, first.before);
+                setEditorMode('patches');
+                addChat('assistant',
+                  `Agent concluded. ${patched.length} file(s) ready for review in PATCHES tab.` +
+                  (patched.length > 1 ? `\n\nFiles: ${patched.map(r => r.file).join(', ')}` : '')
+                );
+              } else if (errors.length > 0) {
+                addChat('assistant', `Agent encountered errors in ${errors.length} file(s). First: ${errors[0].error}`);
+              } else {
+                addChat('assistant', 'Agent explored the repo — no changes required.');
+              }
+
+              completeRun();
+              resolve();
+            }).catch(reject);
+
+            ws.close();
+
+          } else if (msg.type === 'error') {
+            addChat('assistant', `Stream error: ${msg.message}`);
+            failRun(msg.message);
+            ws.close();
+            resolve();
+          }
+        };
+
+        ws.onerror = (e) => {
+          addChat('assistant', 'WebSocket error — check backend.');
+          failRun('WebSocket error');
+          reject(e);
+        };
+
+        ws.onclose = () => {
+          // If WS closes before run_complete (e.g. server restart), resolve gracefully
+          resolve();
+        };
+      });
+
     } catch (err) {
       addChat('assistant', `Error: ${err.message}`);
       failRun(err.message);
