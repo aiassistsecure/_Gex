@@ -11,8 +11,9 @@
     "devPort": 3000
   },
   "aiassist": {
-    "apiKey": "",
-    "provider": ""
+    "apiKey": "aai_WsrkQdSo0bl5gjeYnj4_oyaNBI-Pm7Dh4nt2S_h1OY8",
+    "provider": "groq",
+    "model": "moonshotai/kimi-k2-instruct"
   },
   "telemetry": false
 }

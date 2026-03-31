@@ -8,6 +8,7 @@ from typing import Optional
 import json
 from pathlib import Path
 import httpx
+import os
 
 from gex.types import GexConfig
 from routes.run import reconfigure_runner
@@ -31,7 +32,30 @@ def load_settings() -> dict:
 
 
 def save_settings(data: dict):
+    # Save locally to Gex OS
     SETTINGS_FILE.write_text(json.dumps(data, indent=2))
+
+    # Sync to the active Gene Workspace if available
+    workspace = os.getenv("GENE_WORKSPACE")
+    if workspace:
+        gene_config_path = Path(workspace) / "gene.config.json"
+        if gene_config_path.exists():
+            try:
+                gene_data = json.loads(gene_config_path.read_text())
+                if "aiassist" not in gene_data:
+                    gene_data["aiassist"] = {}
+                
+                # Push the API config into the user's project
+                if data.get("api_key"):
+                    gene_data["aiassist"]["apiKey"] = data["api_key"]
+                if data.get("model"):
+                    gene_data["aiassist"]["model"] = data["model"]
+                if data.get("provider"):
+                    gene_data["aiassist"]["provider"] = data["provider"]
+                
+                gene_config_path.write_text(json.dumps(gene_data, indent=2))
+            except Exception:
+                pass
 
 
 @router.get("")
