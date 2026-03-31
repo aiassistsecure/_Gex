@@ -7,31 +7,33 @@ import useGexStore from '../store/useGexStore';
 import { applyPatches } from '../services/api';
 import { CheckCircle2, Play, CheckCheck } from 'lucide-react';
 
-export default function CircuitDiffViewer() {
-  const { lastResult, repo, addLog } = useGexStore();
+export default function CircuitDiffViewer({ result: propResult }) {
+  const { lastResult: storeResult, repo, addLog } = useGexStore();
   const [applying, setApplying] = useState(false);
   const [appliedIndices, setAppliedIndices] = useState(new Set());
+
+  const result = propResult || storeResult;
 
   // Reset when a new file result comes in
   useEffect(() => {
     setAppliedIndices(new Set());
-  }, [lastResult?.file]);
+  }, [result?.file]);
 
-  if (!lastResult?.diff?.hunks?.length) {
+  if (!result?.diff?.hunks?.length) {
     return null;
   }
 
-  const { hunks, total_additions, total_deletions } = lastResult.diff;
+  const { hunks, total_additions, total_deletions } = result.diff;
   
   // Cleanly join base directory avoiding double slashes if path already has it
-  const filePath = `${repo?.path}/${lastResult.file}`.replace(/[/]+/g, '/');
+  const filePath = `${repo?.path}/${result.file}`.replace(/[/]+/g, '/');
 
   const handleApply = async (hunkIndex, e) => {
     if (e) e.stopPropagation();
     if (appliedIndices.has(hunkIndex)) return;
     
     setApplying(true);
-    addLog(`Applying targeted hunk to ${lastResult.file}...`, 'info');
+    addLog(`Applying targeted hunk to ${result.file}...`, 'info');
     try {
       await applyPatches({
         file_path: filePath,
@@ -39,7 +41,7 @@ export default function CircuitDiffViewer() {
         hunks: hunks
       });
       setAppliedIndices(prev => new Set([...prev, hunkIndex]));
-      addLog(`Hunk applied successfully to ${lastResult.file}.`, 'success', 'patch');
+      addLog(`Hunk applied successfully to ${result.file}.`, 'success', 'patch');
     } catch (err) {
       addLog(`Failed to apply hunk: ${err.message}`, 'error');
     } finally {
@@ -49,7 +51,7 @@ export default function CircuitDiffViewer() {
 
   const handleApplyAll = async () => {
     setApplying(true);
-    addLog(`Applying remaining hunks to ${lastResult.file}...`, 'info');
+    addLog(`Applying remaining hunks to ${result.file}...`, 'info');
     try {
       const allIndices = hunks.map((_, i) => i);
       const toApply = allIndices.filter(i => !appliedIndices.has(i));
@@ -65,7 +67,7 @@ export default function CircuitDiffViewer() {
         hunks: hunks
       });
       setAppliedIndices(new Set(allIndices));
-      addLog(`Applied ${toApply.length} hunks successfully to ${lastResult.file}.`, 'success', 'patch');
+      addLog(`Applied ${toApply.length} hunks successfully to ${result.file}.`, 'success', 'patch');
     } catch (err) {
       addLog(`Failed to apply hunks: ${err.message}`, 'error');
     } finally {

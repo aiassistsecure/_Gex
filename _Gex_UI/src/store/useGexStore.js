@@ -56,9 +56,29 @@ const useGexStore = create((set, get) => ({
 
     set({
       lastResult: result,
+      results: [result], // Keep as array for multi-view
       diffs: newDiffs,
       fileStatuses: newStatuses,
       editorMode: result.status === 'patched' ? 'diff' : state.editorMode,
+    });
+  },
+
+  setResults: (results) => {
+    const state = get();
+    const newDiffs = { ...state.diffs };
+    const newStatuses = { ...state.fileStatuses };
+    
+    results.forEach(r => {
+      if (r.diff) newDiffs[r.file] = r.diff;
+      newStatuses[r.file] = r.status;
+    });
+
+    set({
+      results,
+      lastResult: results.find(r => r.status === 'patched') || results[0],
+      diffs: newDiffs,
+      fileStatuses: newStatuses,
+      editorMode: results.some(r => r.status === 'patched') ? 'diff' : state.editorMode,
     });
   },
 

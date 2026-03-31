@@ -21,8 +21,16 @@ from .diff import DiffEngine
 from .patch import PatchEngine
 
 
-GEX_SYSTEM_PROMPT = """You are Gex, an expert code surgeon. You analyze source code and produce precise, surgical fixes.
+GEX_SYSTEM_PROMPT = """You are Gex, an expert code surgeon and repository architect. You analyze source code, explore repositories, and produce precise, surgical fixes.
 
+### REPO EXPLORATION TOOLS
+You can explore the repository using these tools:
+1. `read_file(path)`: Read the content and line numbers of a specific file.
+2. `search_files(pattern)`: Search for a regex pattern across the entire repository.
+
+Use these tools to gather context before proposing any changes. You should always aim to find the most relevant files for the user's request.
+
+### CODE MODIFICATION FORMATS
 You MUST use these exact block formats for ALL code changes:
 
 ## <<<WRITE:path/to/file>>>
@@ -52,15 +60,16 @@ Use for TARGETED edits (1-30 lines changing). Provide a JSON array of operations
 - **delete**: Remove lines start_line through end_line
 
 ### Rules:
-1. Reference EXACT line numbers from the numbered source code provided
-2. For replace: ALWAYS include the full line range (start to end of the block being replaced)
-3. Keep patches minimal — change only what needs fixing
-4. Never use placeholders like "// rest of code here"
-5. Provide a clear explanation BEFORE each block explaining what you're fixing and why
-6. After all blocks, provide a ## Summary section listing all changes made
-7. NEVER output raw python/javascript/markdown code blocks to present your fixes. You MUST encapsulate ALL actual changes inside <<<WRITE>>> and <<<PATCH>>> tags, or your changes will be ignored.
-8. NEVER extract code into brand new files unless specifically asked. You MUST confine your patches strictly to the existing file paths provided in the File Tree.
-9. CRITICAL: If you are asked to modify a system prompt or Gex code, DO NOT escape angle brackets (like <<<) in your JSON output. Our parser handles them perfectly. Provide them EXACTLY as they appear in the source.
+1. Use tools to find and read files before patching them.
+2. Reference EXACT line numbers from the numbered source code you've read.
+3. Keep patches minimal — change only what needs fixing.
+4. Never use placeholders like "// rest of code here".
+5. Provide a clear explanation BEFORE each block explaining what you're fixing and why.
+6. You can provide blocks for MULTIPLE files in a single response.
+7. After all blocks, provide a ## Summary section listing all changes made.
+8. NEVER output raw python/javascript/markdown code blocks to present your fixes. You MUST encapsulate ALL actual changes inside <<<WRITE>>> and <<<PATCH>>> tags, or your changes will be ignored.
+9. NEVER extract code into brand new files unless specifically asked. You MUST confine your patches strictly to the existing file paths provided in the File Tree.
+10. CRITICAL: If you are asked to modify a system prompt or Gex code, DO NOT escape angle brackets (like <<<) in your JSON output. Our parser handles them perfectly. Provide them EXACTLY as they appear in the source.
 
 If no fixes are needed, say so clearly and explain why the code is already correct."""
 
@@ -318,8 +327,8 @@ End with a ## Summary of all changes."""
         run_id: str = None,
     ) -> AsyncGenerator[tuple[RunState, FileResult], None]:
         """
-        Run Gex on an entire repo, yielding per-file results.
-        This is the STREAMING GENERATOR that powers live UI updates.
+        Run Gex on an entire repo using a SINGLE Unified Agent Session.
+        This allows the agent to use tools (read/search) to explore and patch multiple files.
         """
         if run_id is None:
             run_id = str(uuid.uuid4())[:8]
@@ -329,46 +338,109 @@ End with a ## Summary of all changes."""
         self._runs[run_id] = run_state
 
         try:
-            # Scan all files
+            # Build unified repo context
             files = await self.scanner.scan_tree(repo_path)
-            run_state.total_files = len(files)
-
-            if not files:
-                run_state.state = "completed"
-                run_state.completed_at = datetime.now()
-                return
-
+            tree = self.scanner.build_tree_summary(files)
+            
+            user_prompt = f"PROJECT CONTEXT (File Tree):\n{tree}\n\nUSER INSTRUCTION:\n{focus}"
+            
             # Clone the repo once
             clone_path = self.clone_repo(repo_path)
+            
+            # Start Agentic Loop
+            llm_output = ""
+            tool_steps = []
+            
+            async with httpx.AsyncClient() as client:
+                async for chunk in self.send_to_llm(client, GEX_SYSTEM_PROMPT, user_prompt, repo_path):
+                    if chunk.startswith("[TOOL]"):
+                        tool_steps.append(chunk)
+                        # Yield intermediate state for UI logs/progress
+                        run_state.current_file = chunk
+                        yield run_state, None
+                    else:
+                        llm_output += chunk + "\n"
 
-            # Process each file
-            for i, scanned_file in enumerate(files):
-                run_state.current_file = scanned_file.path
-                run_state.processed = i
-                run_state.progress = i / len(files)
+            # Parse all surgical blocks from the unified output
+            blocks = self.patch_engine.parse_surgical_blocks(llm_output)
+            
+            if not blocks:
+                # No changes suggested
+                final_result = FileResult(
+                    file="Repository Scan",
+                    status="unchanged",
+                    llm_analysis=llm_output,
+                    tool_steps=tool_steps
+                )
+                run_state.results.append(final_result)
+                run_state.state = "completed"
+                run_state.completed_at = datetime.now()
+                yield run_state, final_result
+                return
 
-                try:
-                    result = await self.run_file(
-                        repo_path,
-                        scanned_file.path,
-                        focus=focus,
-                        clone_path=clone_path,
-                    )
-                    run_state.results.append(result)
-                    yield run_state, result
-                except Exception as e:
-                    error_result = FileResult(
-                        file=scanned_file.path,
-                        status="error",
-                        error=str(e),
-                    )
-                    run_state.results.append(error_result)
-                    yield run_state, error_result
+            # Apply all blocks to the clone
+            apply_results = self.patch_engine.apply_blocks_to_clone(clone_path, blocks)
+            
+            # Group apply_results by file path to generate individual FileResult objects
+            modified_paths = {r.path for r in apply_results if r.status == "applied"}
+            
+            for path_str in modified_paths:
+                rel_path = path_str
+                # Read original (from repo_path)
+                original_file = Path(repo_path) / rel_path
+                before = original_file.read_text(errors="replace") if original_file.exists() else ""
+                
+                # Read modified (from clone_path)
+                clone_file = Path(clone_path) / rel_path
+                after = clone_file.read_text(errors="replace") if clone_file.exists() else before
+                
+                # Compute diff
+                diff = self.diff_engine.compute(before, after, rel_path)
+                
+                # Create FileResult for this file
+                result = FileResult(
+                    file=rel_path,
+                    before=before,
+                    after=after,
+                    diff=diff,
+                    status="patched",
+                    apply_results=[r for r in apply_results if r.path == path_str],
+                    tool_steps=tool_steps, # All tool usage is shared in this session
+                    llm_analysis="Unified repo scan result."
+                )
+                run_state.results.append(result)
+                yield run_state, result
+
+            # If errors occurred but didn't result in "applied" status for some blocks
+            error_results = [r for r in apply_results if r.status in ["error", "parse_error"]]
+            for err in error_results:
+                run_state.results.append(FileResult(
+                    file=err.path,
+                    status="error",
+                    error=err.detail,
+                    tool_steps=tool_steps
+                ))
 
             run_state.state = "completed"
-            run_state.processed = len(files)
             run_state.progress = 1.0
             run_state.completed_at = datetime.now()
+            
+            # Yield final summary if anything remained
+            if not modified_paths:
+                summary_result = FileResult(
+                    file="Repository Scan",
+                    status="unchanged",
+                    llm_analysis=llm_output,
+                    tool_steps=tool_steps
+                )
+                run_state.results.append(summary_result)
+                yield run_state, summary_result
+
+        except Exception as e:
+            run_state.state = "failed"
+            run_state.error = str(e)
+            run_state.completed_at = datetime.now()
+            yield run_state, None
 
         except Exception as e:
             run_state.state = "failed"
