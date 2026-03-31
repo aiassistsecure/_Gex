@@ -2,6 +2,13 @@
 
 The official frontend for **`_Gex`** — an AI-native surgical code modification environment. Built with React and Vite, this UI integrates the Monaco Editor to provide a "Microsoft IDE x Bloomberg Terminal" experience for reviewing, generating, and applying high-density LLM code patches.
 
+## 🧬 Philosophy
+
+AI should not blindly write code.
+
+AI should propose.
+Humans should control.
+
 ## ⚡ Features
 
 - **Circuit Diff Viewer**: Real-time, side-by-side visualization of AI-generated surgical code patches using Monaco's diff editor.
