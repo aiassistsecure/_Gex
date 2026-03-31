@@ -218,7 +218,7 @@ End with a ## Summary of all changes."""
         Run Gex on a single file.
         Returns a FileResult with before/after content, structured diff, and apply results.
         """
-        # Scan just this file
+        # Scan just this file for its content
         files = await self.scanner.scan_tree(repo_path, focus_file=file_path)
         if not files:
             return FileResult(
@@ -235,9 +235,28 @@ End with a ## Summary of all changes."""
         scanned = files[0]
         before = scanned.content
 
-        # Build prompt and send to LLM
-        tree = self.scanner.build_tree_summary(files)
-        user_prompt = self._build_user_prompt(files, tree, focus)
+        # Build full repo tree so LLM knows about related files it can read via tools
+        all_files = await self.scanner.scan_tree(repo_path)
+        full_tree = self.scanner.build_tree_summary(all_files)
+
+        # Build prompt: full tree + focus file content
+        file_context = self.scanner.build_context(files)
+        focus_block = (
+            f"\n\n**Focus area**: {focus}\nPrioritize fixes related to this area."
+            if focus else ""
+        )
+        user_prompt = f"""Analyze this file and provide surgical fixes.
+
+## Repository File Tree
+{full_tree}
+
+## Target File (line-numbered)
+{file_context}
+{focus_block}
+
+You have access to read_file and search_files tools to explore related files (imports, types, shared utils) before proposing changes.
+Provide your fixes using <<<WRITE>>> and <<<PATCH>>> blocks. Be precise with line numbers.
+End with a ## Summary of all changes."""
 
         async with httpx.AsyncClient() as client:
             try:
