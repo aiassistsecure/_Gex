@@ -76,10 +76,10 @@ export default function SettingsPanel() {
             {models.length > 0 && (
               <div style={{ marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                 {models.slice(0, 6).map(m => (
-                  <button key={m} className="btn btn-sm"
-                    onClick={() => setSettings(s => ({ ...s, model: m }))}
+                  <button key={m.id} className="btn btn-sm"
+                    onClick={() => setSettings(s => ({ ...s, model: m.id }))}
                     style={{ fontSize: 'var(--font-size-xs)' }}>
-                    {m}
+                    {m.name || m.id}
                   </button>
                 ))}
               </div>
