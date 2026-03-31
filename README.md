@@ -41,6 +41,12 @@ The official frontend for **`_Gex`** — an AI-native surgical code modification
 
 This software is provided under a custom MIT License with Commercial Restrictions.
 
+This project is source-available under a permissive MIT-style license with
+additional protections for branding and commercial competition.
+
 The names "Gex", "_Gex", "AiAssist Secure", and "Interchained" are reserved to Interchained LLC. You may not use this software to build or operate a directly competing AI code modification platform as a commercial product without explicit written permission.
 
 See the [LICENSE](./LICENSE) file for complete details and attribution requirements.
+
+For commercial use or backend access:
+dev@interchained.org
