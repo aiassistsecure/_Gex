@@ -1,6 +1,6 @@
 {
   "api_key": "aai_WsrkQdSo0bl5gjeYnj4_oyaNBI-Pm7Dh4nt2S_h1OY8",
   "api_base": "https://api.aiassist.net",
-  "model": "moonshotai/kimi-k2-instruct",
-  "provider": "groq"
+  "model": "gpt-5.4",
+  "provider": "openai"
 }

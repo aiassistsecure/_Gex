@@ -218,7 +218,7 @@ async def apply_patches(req: ApplyPatchesRequest):
 
         # Write back
         new_content = "\n".join(lines)
-        file_path.write_text(new_content)
+        file_path.write_text(new_content, encoding="utf-8")
 
         return {
             "status": "applied",

@@ -1,66 +1,91 @@
 import { useState, useEffect, useRef } from 'react';
 
 const API_URL = '/api';
-const WS_URL = `ws://${window.location.hostname}:18765/ws`;
+const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL = `${WS_PROTOCOL}//${window.location.hostname}:18765/ws`;
 
 export default function App() {
   const [status, setStatus] = useState('connecting');
   const [appInfo, setAppInfo] = useState(null);
   const [wsMessages, setWsMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const wsRef = useRef(null);
 
-  // Fetch app info
   useEffect(() => {
     fetch(`${API_URL}/info`)
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error('Failed to fetch app info');
+        }
+        return r.json();
+      })
+      .then((data) => {
         setAppInfo(data);
-        setStatus('connected');
       })
       .catch(() => setStatus('error'));
   }, []);
 
-  // WebSocket connection
   useEffect(() => {
-    const connect = () => {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
-      ws.onopen = () => {
-        setStatus('connected');
-        setWsMessages(prev => [...prev, { type: 'system', text: '🔗 WebSocket connected' }]);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          setWsMessages(prev => [...prev, { type: 'incoming', text: JSON.stringify(data, null, 2) }]);
-        } catch {
-          setWsMessages(prev => [...prev, { type: 'incoming', text: event.data }]);
-        }
-      };
-
-      ws.onclose = () => {
-        setStatus('disconnected');
-        setWsMessages(prev => [...prev, { type: 'system', text: '🔌 WebSocket disconnected' }]);
-        setTimeout(connect, 3000);
-      };
-
-      ws.onerror = () => {
-        setStatus('error');
-      };
+    ws.onopen = () => {
+      setStatus('connected');
+      setWsMessages((prev) => [
+        ...prev,
+        { type: 'system', text: 'WebSocket connected' },
+      ]);
     };
 
-    connect();
-    return () => wsRef.current?.close();
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setWsMessages((prev) => [
+          ...prev,
+          { type: 'incoming', text: JSON.stringify(data, null, 2) },
+        ]);
+      } catch {
+        setWsMessages((prev) => [
+          ...prev,
+          { type: 'incoming', text: event.data },
+        ]);
+      }
+    };
+
+    ws.onerror = () => {
+      setStatus('error');
+      setWsMessages((prev) => [
+        ...prev,
+        { type: 'system', text: 'WebSocket error' },
+      ]);
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected');
+      setWsMessages((prev) => [
+        ...prev,
+        { type: 'system', text: 'WebSocket disconnected' },
+      ]);
+    };
+
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
   }, []);
 
   const sendMessage = () => {
-    if (!input.trim() || !wsRef.current) return;
-    const msg = { type: 'user:message', payload: { text: input } };
+    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const msg = { type: 'user:message', payload: { text: input.trim() } };
     wsRef.current.send(JSON.stringify(msg));
-    setWsMessages(prev => [...prev, { type: 'outgoing', text: JSON.stringify(msg, null, 2) }]);
+    setWsMessages((prev) => [
+      ...prev,
+      { type: 'outgoing', text: JSON.stringify(msg, null, 2) },
+    ]);
     setInput('');
   };
 
@@ -69,105 +94,111 @@ export default function App() {
     connecting: 'bg-amber-500 animate-pulse',
     disconnected: 'bg-zinc-500',
     error: 'bg-red-500',
-  }[status];
+  }[status] || 'bg-zinc-500';
+
+  const navItems = ['Dashboard', 'Projects', 'Agents', 'Settings'];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="glass border-b border-white/5 px-6 py-4 flex items-center justify-between"
-              style={{ WebkitAppRegion: 'drag' }}>
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <header className="glass border-b border-white/5 px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="text-2xl">🧬</div>
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((prev) => !prev)}
+            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
+            style={{ WebkitAppRegion: 'no-drag' }}
+            aria-label="Open navigation"
+          >
+            ☰
+          </button>
+
           <div>
-            <h1 className="text-lg font-semibold text-white">
-              {appInfo?.name || 'test-app'}
-            </h1>
-            <p className="text-xs text-zinc-500">Built with Gene</p>
+            <h1 className="text-lg font-semibold">AI Assist</h1>
+            <p className="text-sm text-zinc-400">
+              {appInfo?.name || 'Realtime dashboard'}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' }}>
-          <div className={`w-2 h-2 rounded-full ${statusColor}`} />
-          <span className="text-xs text-zinc-400 capitalize">{status}</span>
+
+        <div className="flex items-center gap-2 text-sm text-zinc-300">
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusColor}`} />
+          <span className="capitalize">{status}</span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex">
-        {/* Sidebar */}
-        <aside className="w-64 glass border-r border-white/5 p-4 flex flex-col gap-2">
-          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Navigation</h2>
-          {['Dashboard', 'Projects', 'Agents', 'Settings'].map((item) => (
-            <button
-              key={item}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
-            >
-              {item}
-            </button>
-          ))}
+      <div className="flex">
+        <aside
+          className={`${mobileNavOpen ? 'block' : 'hidden'} md:block w-full md:w-64 border-r border-white/5 bg-white/[0.02]`}
+        >
+          <nav className="p-4 space-y-2">
+            {navItems.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="w-full text-left px-3 py-2 rounded-lg text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
+                onClick={() => setMobileNavOpen(false)}
+              >
+                {item}
+              </button>
+            ))}
+          </nav>
         </aside>
 
-        {/* Content Area */}
-        <div className="flex-1 p-6 flex flex-col gap-6">
-          {/* Status Cards */}
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'Runtime', value: 'Python 3.10+', icon: '🐍' },
-              { label: 'Framework', value: appInfo?.framework || 'Gene', icon: '🧬' },
-              { label: 'WebSocket', value: status, icon: '⚡' },
-            ].map((card) => (
-              <div key={card.label} className="glass rounded-xl p-4 glow">
-                <div className="flex items-center gap-2 mb-1">
-                  <span>{card.icon}</span>
-                  <span className="text-xs text-zinc-500">{card.label}</span>
-                </div>
-                <p className="text-lg font-semibold text-white">{card.value}</p>
-              </div>
-            ))}
-          </div>
+        <main className="flex-1 p-4 sm:p-6">
+          <section className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">App Info</h2>
+            <pre className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-300 overflow-auto">
+              {JSON.stringify(appInfo || { message: 'Loading...' }, null, 2)}
+            </pre>
+          </section>
 
-          {/* WebSocket Console */}
-          <div className="flex-1 glass rounded-xl flex flex-col overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
-              <span className="text-sm font-medium text-zinc-300">Live Console</span>
-              <span className="text-xs text-zinc-600 font-mono">{WS_URL}</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1 max-h-[400px]">
-              {wsMessages.map((msg, i) => (
-                <pre
-                  key={i}
-                  className={`whitespace-pre-wrap ${
-                    msg.type === 'system' ? 'text-zinc-500' :
-                    msg.type === 'outgoing' ? 'text-gene-400' :
-                    'text-emerald-400'
-                  }`}
-                >
-                  {msg.type === 'outgoing' ? '→ ' : msg.type === 'incoming' ? '← ' : '• '}
-                  {msg.text}
-                </pre>
-              ))}
-              {wsMessages.length === 0 && (
-                <p className="text-zinc-600 italic">Waiting for messages...</p>
+          <section className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">WebSocket Messages</h2>
+            <div className="rounded-xl border border-white/10 bg-black/20 p-4 h-80 overflow-auto space-y-3">
+              {wsMessages.length === 0 ? (
+                <p className="text-zinc-500">No messages yet.</p>
+              ) : (
+                wsMessages.map((message, index) => (
+                  <div key={index} className="border-b border-white/5 pb-3 last:border-b-0">
+                    <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">
+                      {message.type}
+                    </div>
+                    <pre className="text-sm text-zinc-200 whitespace-pre-wrap break-words">
+                      {message.text}
+                    </pre>
+                  </div>
+                ))
               )}
             </div>
-            <div className="px-4 py-3 border-t border-white/5 flex gap-2">
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold mb-2">Send Message</h2>
+            <div className="flex gap-3">
               <input
                 type="text"
                 value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                placeholder="Send a WebSocket message..."
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-gene-500/50 transition-colors"
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    sendMessage();
+                  }
+                }}
+                placeholder="Type a message..."
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder:text-zinc-500 outline-none focus:border-white/20"
               />
               <button
+                type="button"
                 onClick={sendMessage}
-                className="px-4 py-2 bg-gene-600 hover:bg-gene-500 text-white text-sm font-medium rounded-lg transition-colors"
+                disabled={!input.trim() || status !== 'connected'}
+                className="rounded-lg px-4 py-2 bg-white text-black font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send
               </button>
             </div>
-          </div>
-        </div>
-      </main>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }

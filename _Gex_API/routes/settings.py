@@ -33,7 +33,7 @@ def load_settings() -> dict:
 
 def save_settings(data: dict):
     # Save locally to Gex OS
-    SETTINGS_FILE.write_text(json.dumps(data, indent=2))
+    SETTINGS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     # Sync to the active Gene Workspace if available
     workspace = os.getenv("GENE_WORKSPACE")
@@ -53,7 +53,7 @@ def save_settings(data: dict):
                 if data.get("provider"):
                     gene_data["aiassist"]["provider"] = data["provider"]
                 
-                gene_config_path.write_text(json.dumps(gene_data, indent=2))
+                gene_config_path.write_text(json.dumps(gene_data, indent=2), encoding="utf-8")
             except Exception:
                 pass
 

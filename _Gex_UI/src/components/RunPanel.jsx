@@ -27,6 +27,7 @@ export default function RunPanel() {
     addLog,
     setLastResult,
     setResults,
+    setActiveFile,
     updateRunProgress,
     results: storeResults,
   } = useGexStore();
@@ -54,12 +55,16 @@ export default function RunPanel() {
     try {
       const result = await runFile(repo.path, activeFile, instruction);
       setLastResult(result);
-      
+
       if (result.tool_steps) {
         result.tool_steps.forEach(step => addChat('tool', step));
       }
 
       if (result.status === 'patched') {
+        // Auto-load the pre-patch content into the editor so Monaco DiffEditor has both sides
+        if (result.before !== undefined) {
+          setActiveFile(activeFile, result.before);
+        }
         addChat('assistant', result.llm_analysis || 'Changes generated. Review the diff below.');
       } else if (result.status === 'unchanged') {
         addChat('assistant', result.llm_analysis || 'No changes needed — code looks correct.');
@@ -120,12 +125,22 @@ export default function RunPanel() {
 
           const results = status.results || [];
           setResults(results);
-          
+
           const patched = results.filter(r => r.status === 'patched');
           const errors = results.filter(r => r.status === 'error');
-          
+
           if (patched.length > 0) {
-            addChat('assistant', `Agent concluded thinking. Found ${patched.length} file(s) to modify.\n\n${patched[0].llm_analysis || ''}`);
+            // Auto-open the first patched file so the editor + diff view activate
+            const first = patched[0];
+            const fullPath = `${repo.path}/${first.file}`.replace(/[\/]+/g, '/');
+            if (first.before !== undefined) {
+              setActiveFile(fullPath, first.before);
+            }
+            addChat('assistant',
+              `Agent concluded thinking. Found ${patched.length} file(s) to modify.` +
+              (patched.length > 1 ? `\n\nPatched: ${patched.map(r => r.file).join(', ')}` : '') +
+              (first.llm_analysis ? `\n\n${first.llm_analysis}` : '')
+            );
           } else if (errors.length > 0) {
             const firstErr = errors[0].error || 'Analysis failed.';
             addChat('assistant', `Agent encountered errors in ${errors.length} file(s). First error: ${firstErr}`);

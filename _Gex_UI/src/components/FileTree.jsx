@@ -27,8 +27,14 @@ function FileIcon({ type, ext }) {
 function TreeNode({ node, depth = 0, activeFile, fileStatuses, onSelect }) {
   const isDir = node.type === 'directory';
   const ext = node.name?.split('.').pop()?.toLowerCase();
-  const status = fileStatuses[node.path] || null;
   const isActive = activeFile === node.path;
+
+  // fileStatuses keys are relative paths (e.g. "src/auth.py") — node.path is absolute.
+  // Match by checking if the absolute path ends with any relative key.
+  const nodePosix = node.path.replace(/\\/g, '/');
+  const status = fileStatuses[node.path]
+    || Object.entries(fileStatuses).find(([k]) => nodePosix.endsWith(k.replace(/\\/g, '/')))?.[1]
+    || null;
 
   const className = [
     'file-tree-item',

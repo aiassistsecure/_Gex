@@ -806,11 +806,15 @@ textarea.input {
 .diff-hunk-body {
   font-size: var(--font-size-xs);
   line-height: 1.65;
+  max-height: 280px;
+  overflow-y: auto;
 }
 .diff-line {
   padding: 0 10px;
-  white-space: pre-wrap;
-  word-break: break-all;
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+  font-family: var(--font-mono);
 }
 .diff-line.added {
   background: rgba(0, 230, 138, 0.08);

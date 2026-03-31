@@ -25,8 +25,12 @@ export default function CircuitDiffViewer({ result: propResult }) {
 
   const { hunks, total_additions, total_deletions } = result.diff;
   
-  // Cleanly join base directory avoiding double slashes if path already has it
-  const filePath = `${repo?.path}/${result.file}`.replace(/[/]+/g, '/');
+  // result.file is an absolute path on single-file runs, relative on repo scans.
+  // Detect absolute (Windows "C:\" or Unix "/") and use directly; otherwise join.
+  const isAbsolute = /^([A-Za-z]:[\\/]|\/)/.test(result.file);
+  const filePath = isAbsolute
+    ? result.file
+    : `${repo?.path}/${result.file}`.replace(/[\\/]+/g, '/');
 
   const handleApply = async (hunkIndex, e) => {
     if (e) e.stopPropagation();

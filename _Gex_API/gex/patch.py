@@ -199,7 +199,7 @@ class PatchEngine:
 
             if block.action == "write":
                 full_path.parent.mkdir(parents=True, exist_ok=True)
-                full_path.write_text(block.content or "")
+                full_path.write_text(block.content or "", encoding="utf-8")
                 results.append(ApplyResult(
                     path=filepath,
                     action="WRITE",
@@ -222,7 +222,7 @@ class PatchEngine:
                     new_content, added, removed = self.apply_patch_operations(
                         original, block.operations or []
                     )
-                    full_path.write_text(new_content)
+                    full_path.write_text(new_content, encoding="utf-8")
                     results.append(ApplyResult(
                         path=filepath,
                         action="PATCH",
