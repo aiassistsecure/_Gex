@@ -283,13 +283,6 @@ End with a ## Summary of all changes."""
                     before=before,
                 )
 
-        # Parse surgical blocks
-        try:
-            with open("llm_debug_dump.txt", "w", encoding="utf-8") as f:
-                f.write(llm_output)
-        except Exception:
-            pass
-
         blocks = self.patch_engine.parse_surgical_blocks(llm_output)
 
         if not blocks:
@@ -470,11 +463,6 @@ End with a ## Summary of all changes."""
             run_state.error = str(e)
             run_state.completed_at = datetime.now()
             yield run_state, None
-
-        except Exception as e:
-            run_state.state = "failed"
-            run_state.error = str(e)
-            run_state.completed_at = datetime.now()
 
     def get_run_state(self, run_id: str) -> Optional[RunState]:
         """Get the current state of a run."""
