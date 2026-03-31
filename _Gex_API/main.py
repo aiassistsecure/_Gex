@@ -18,7 +18,7 @@ from typing import Optional
 
 from gex.types import GexConfig
 from gex.runner import GexRunner
-from routes import repo, run, settings
+from routes import repo, run, settings, checkpoints
 
 
 @asynccontextmanager
@@ -72,6 +72,7 @@ app.add_middleware(
 app.include_router(repo.router)
 app.include_router(run.router)
 app.include_router(settings.router)
+app.include_router(checkpoints.router)
 
 
 # ── Gene-specific routes ──

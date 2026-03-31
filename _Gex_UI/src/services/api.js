@@ -103,6 +103,32 @@ export async function listModels(apiKey = null) {
   return request(`/settings/models${query}`);
 }
 
+// ── Checkpoints ──
+
+export async function freezeCheckpoint(repoPath, label = null) {
+  return request('/checkpoints', {
+    method: 'POST',
+    body: JSON.stringify({ repo_path: repoPath, label }),
+  });
+}
+
+export async function listCheckpoints(repoPath) {
+  return request(`/checkpoints?repo_path=${encodeURIComponent(repoPath)}`);
+}
+
+export async function restoreCheckpoint(repoPath, checkpointId, files = null) {
+  return request(`/checkpoints/${checkpointId}/restore`, {
+    method: 'POST',
+    body: JSON.stringify({ repo_path: repoPath, files }),
+  });
+}
+
+export async function deleteCheckpoint(repoPath, checkpointId) {
+  return request(`/checkpoints/${checkpointId}?repo_path=${encodeURIComponent(repoPath)}`, {
+    method: 'DELETE',
+  });
+}
+
 // ── Gene CLI Actions ──
 
 export async function geneCLI(action, cwd = null) {

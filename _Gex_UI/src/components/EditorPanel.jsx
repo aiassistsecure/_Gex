@@ -2,11 +2,11 @@
  * EditorPanel v1.0.0 -- Monaco editor with tab bar + diff mode
  * Bloomberg chipset theme, auto-save, mode switching
  */
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { FileCode } from 'lucide-react';
 import Editor, { DiffEditor, loader } from '@monaco-editor/react';
 import useGexStore from '../store/useGexStore';
-import { saveFile } from '../services/api';
+import { saveFile, freezeCheckpoint, listCheckpoints, restoreCheckpoint, deleteCheckpoint } from '../services/api';
 import PreviewPanel from './PreviewPanel';
 import CircuitDiffViewer from './CircuitDiffViewer';
 
@@ -78,16 +78,110 @@ function detectLanguage(fp) {
 export default function EditorPanel() {
   const {
     activeFile, activeFileContent, editorMode, setEditorMode,
-    lastResult, setActiveFile, results: storeResults,
+    lastResult, setActiveFile, results: storeResults, repo, addLog,
   } = useGexStore();
   const saveTimeoutRef = useRef(null);
 
   const pendingPatches = (storeResults || []).filter(r => r.status === 'patched' && r.diff?.hunks?.length);
   const patchCount = pendingPatches.length;
 
+  // ── Checkpoint state ──
+  const [checkpoints, setCheckpoints]   = useState([]);
+  const [cpLoading, setCpLoading]       = useState(false);
+  const [cpFreezing, setCpFreezing]     = useState(false);
+  const [cpLabel, setCpLabel]           = useState('');
+  const [restoring, setRestoring]       = useState(null);
+
+  const loadCheckpoints = useCallback(async () => {
+    if (!repo?.path) return;
+    setCpLoading(true);
+    try {
+      const data = await listCheckpoints(repo.path);
+      setCheckpoints(data.checkpoints || []);
+    } catch { /* non-fatal */ }
+    finally { setCpLoading(false); }
+  }, [repo?.path]);
+
+  useEffect(() => {
+    if (editorMode === 'checkpoints') loadCheckpoints();
+  }, [editorMode, loadCheckpoints]);
+
+  const handleFreeze = async () => {
+    if (!repo?.path) return;
+    setCpFreezing(true);
+    try {
+      const result = await freezeCheckpoint(repo.path, cpLabel || null);
+      addLog(`Frozen: ${result.label} (${result.file_count} files)`, 'success');
+      setCpLabel('');
+      await loadCheckpoints();
+    } catch (e) {
+      addLog(`Freeze failed: ${e.message}`, 'error');
+    } finally { setCpFreezing(false); }
+  };
+
+  const handleRestore = async (cp) => {
+    if (!repo?.path) return;
+    setRestoring(cp.id);
+    try {
+      const result = await restoreCheckpoint(repo.path, cp.id);
+      addLog(`Restored ${result.restored} files from "${cp.label}"`, 'success');
+      // Reload active file if it was restored
+      if (activeFile) {
+        const { readFile } = await import('../services/api');
+        const data = await readFile(activeFile);
+        if (data?.content !== undefined) setActiveFile(activeFile, data.content);
+      }
+    } catch (e) {
+      addLog(`Restore failed: ${e.message}`, 'error');
+    } finally { setRestoring(null); }
+  };
+
+  const handleDeleteCp = async (cp) => {
+    if (!repo?.path) return;
+    try {
+      await deleteCheckpoint(repo.path, cp.id);
+      await loadCheckpoints();
+    } catch (e) {
+      addLog(`Delete failed: ${e.message}`, 'error');
+    }
+  };
+
   const ensureTheme = useCallback((monaco) => {
     monaco.editor.defineTheme('gex-gel', GEX_THEME);
   }, []);
+
+  const editorRef = useRef(null);
+
+  const saveNow = useCallback((content) => {
+    const val = content ?? activeFileContent;
+    if (!activeFile || !val) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveFile(activeFile, val).catch(() => {});
+  }, [activeFile, activeFileContent]);
+
+  const handleEditorMount = useCallback((editor, monaco) => {
+    editorRef.current = editor;
+    // Register inside Monaco too (shows in command palette)
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+      () => saveNow(editor.getValue()),
+    );
+  }, [saveNow]);
+
+  // Global Ctrl+S — must preventDefault here or the browser save dialog fires
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        // Get latest value from Monaco ref if available, else fall back to store
+        const val = editorRef.current ? editorRef.current.getValue() : activeFileContent;
+        saveNow(val);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [saveNow, activeFileContent]);
 
   const language = detectLanguage(activeFile);
   const hasDiff = lastResult && lastResult.status === 'patched' && lastResult.before !== undefined;
@@ -95,12 +189,10 @@ export default function EditorPanel() {
   const handleChange = useCallback((value) => {
     if (value === undefined || value === activeFileContent) return;
     setActiveFile(activeFile, value);
-
+    // Debounce auto-save — Ctrl+S will flush this immediately
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveFile(activeFile, value).catch(() => {});
-    }, 1000);
-  }, [activeFile, activeFileContent, setActiveFile]);
+    saveTimeoutRef.current = setTimeout(() => saveNow(value), 1500);
+  }, [activeFile, activeFileContent, setActiveFile, saveNow]);
 
   const fileName = activeFile ? activeFile.split(/[\\/]/).pop() : null;
 
@@ -162,6 +254,13 @@ export default function EditorPanel() {
             )}
           </button>
           <button
+            className={`btn btn-sm ${editorMode === 'checkpoints' ? 'btn-cyan' : ''}`}
+            onClick={() => setEditorMode('checkpoints')}
+            style={{ borderRadius: '0' }}
+          >
+            CHECKPOINTS
+          </button>
+          <button
             className={`btn btn-sm ${editorMode === 'preview' ? 'btn-green' : ''}`}
             onClick={() => setEditorMode('preview')}
             style={{ borderRadius: '0 3px 3px 0' }}
@@ -173,7 +272,96 @@ export default function EditorPanel() {
 
       {/* Content Area */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {editorMode === 'preview' ? (
+        {editorMode === 'checkpoints' ? (
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: 'var(--surface-0)' }}>
+            {/* FREEZE row */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', alignItems: 'center' }}>
+              <input
+                className="input input-sm"
+                placeholder="Label (optional) — e.g. 'pre-nav-refactor'"
+                value={cpLabel}
+                onChange={e => setCpLabel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleFreeze()}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleFreeze}
+                disabled={cpFreezing || !repo?.path}
+                style={{ whiteSpace: 'nowrap', minWidth: '90px' }}
+              >
+                {cpFreezing ? 'FREEZING...' : '❄ FREEZE'}
+              </button>
+            </div>
+
+            {/* Checkpoint list */}
+            {cpLoading ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-xs)', textAlign: 'center', padding: '20px' }}>Loading...</div>
+            ) : checkpoints.length === 0 ? (
+              <div className="empty-state">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                </svg>
+                <h3>No Checkpoints Yet</h3>
+                <p>Hit FREEZE to snapshot the workspace state before a risky patch.</p>
+              </div>
+            ) : (
+              checkpoints.map((cp) => {
+                const ts = new Date(cp.timestamp);
+                const timeStr = ts.toLocaleString(undefined, {
+                  month: 'short', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                return (
+                  <div key={cp.id} style={{
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '10px 12px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}>
+                    {/* Timeline dot */}
+                    <div style={{
+                      width: '8px', height: '8px', borderRadius: '50%',
+                      background: 'var(--accent-cyan)', flexShrink: 0,
+                      boxShadow: '0 0 6px var(--accent-cyan)',
+                    }} />
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cp.label}
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-dim)', marginTop: '2px' }}>
+                        {timeStr} &nbsp;·&nbsp; {cp.file_count} files
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <button
+                      className="btn btn-sm btn-cyan"
+                      onClick={() => handleRestore(cp)}
+                      disabled={restoring === cp.id}
+                      style={{ padding: '2px 10px', fontSize: 'var(--font-size-xs)' }}
+                    >
+                      {restoring === cp.id ? '...' : 'RESTORE'}
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => handleDeleteCp(cp)}
+                      style={{ padding: '2px 8px', fontSize: 'var(--font-size-xs)', color: 'var(--accent-red)' }}
+                      title="Delete checkpoint"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+        ) : editorMode === 'preview' ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <PreviewPanel />
           </div>
@@ -247,6 +435,7 @@ export default function EditorPanel() {
             value={activeFileContent}
             theme="gex-gel"
             beforeMount={ensureTheme}
+            onMount={handleEditorMount}
             onChange={handleChange}
             options={{
               minimap: { enabled: false },

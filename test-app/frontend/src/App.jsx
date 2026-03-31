@@ -21,7 +21,7 @@ export default function App() {
           throw new Error('Failed to load app info');
   useEffect(() => {
     let cancelled = false;
-      })
+      })  
       .then((data) => {
         if (!cancelled) {
           setAppInfo(data);

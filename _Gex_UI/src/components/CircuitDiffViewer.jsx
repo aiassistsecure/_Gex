@@ -4,11 +4,11 @@
  */
 import { useState, useEffect } from 'react';
 import useGexStore from '../store/useGexStore';
-import { applyPatches, readFile } from '../services/api';
+import { applyPatches, readFile, freezeCheckpoint } from '../services/api';
 import { CheckCircle2, Play, CheckCheck } from 'lucide-react';
 
 export default function CircuitDiffViewer({ result: propResult }) {
-  const { lastResult: storeResult, repo, addLog, setActiveFile, setEditorMode } = useGexStore();
+  const { lastResult: storeResult, repo, addLog, setActiveFile, setEditorMode, markResultApplied } = useGexStore();
   const [applying, setApplying] = useState(false);
   const [appliedIndices, setAppliedIndices] = useState(new Set());
 
@@ -44,6 +44,13 @@ export default function CircuitDiffViewer({ result: propResult }) {
     }
   };
 
+  const autoFreeze = async (label) => {
+    if (!repo?.path) return;
+    try {
+      await freezeCheckpoint(repo.path, label);
+    } catch { /* silent — don't block apply if freeze fails */ }
+  };
+
   const handleApply = async (hunkIndex, e) => {
     if (e) e.stopPropagation();
     if (appliedIndices.has(hunkIndex)) return;
@@ -51,14 +58,20 @@ export default function CircuitDiffViewer({ result: propResult }) {
     setApplying(true);
     addLog(`Applying hunk to ${result.file}...`, 'info');
     try {
+      await autoFreeze(`pre-patch: ${result.file}`);
       await applyPatches({
         file_path: filePath,
         accepted_hunks: [hunkIndex],
         hunks: hunks
       });
-      setAppliedIndices(prev => new Set([...prev, hunkIndex]));
+      const nextApplied = new Set([...appliedIndices, hunkIndex]);
+      setAppliedIndices(nextApplied);
       addLog(`Hunk applied to ${result.file}.`, 'success', 'patch');
       await syncEditorFromDisk();
+      // If that was the last hunk, retire the result from the store
+      if (nextApplied.size === hunks.length) {
+        markResultApplied(result.file);
+      }
     } catch (err) {
       addLog(`Failed to apply hunk: ${err.message}`, 'error');
     } finally {
@@ -72,12 +85,8 @@ export default function CircuitDiffViewer({ result: propResult }) {
     try {
       const allIndices = hunks.map((_, i) => i);
       const toApply = allIndices.filter(i => !appliedIndices.has(i));
-
-      if (toApply.length === 0) {
-        setApplying(false);
-        return;
-      }
-
+      if (toApply.length === 0) { setApplying(false); return; }
+      await autoFreeze(`pre-patch: ${result.file}`);
       await applyPatches({
         file_path: filePath,
         accepted_hunks: toApply,
@@ -86,6 +95,7 @@ export default function CircuitDiffViewer({ result: propResult }) {
       setAppliedIndices(new Set(allIndices));
       addLog(`Applied ${toApply.length} hunks to ${result.file}.`, 'success', 'patch');
       await syncEditorFromDisk();
+      markResultApplied(result.file);
     } catch (err) {
       addLog(`Failed to apply hunks: ${err.message}`, 'error');
     } finally {
