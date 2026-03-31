@@ -57,9 +57,16 @@ export default function RunPanel() {
       const result = await runFile(repo.path, activeFile, instruction);
       addLog(`[ok] Run completed`, 'success');
 
-      // THIS is the critical missing piece — store the result so diffs render
+      // Store the result so diffs render
       setLastResult(result);
       completeRun();
+
+      // Show tool usage log
+      if (result.tool_steps && result.tool_steps.length > 0) {
+        for (const step of result.tool_steps) {
+          addChat('tool', step);
+        }
+      }
 
       if (result.status === 'patched') {
         addChat('assistant', result.llm_analysis || 'Changes generated. Review the diff below.');
@@ -129,6 +136,13 @@ export default function RunPanel() {
 
               const patchedCount = results.filter(r => r.status === 'patched').length;
               const unchangedCount = results.filter(r => r.status === 'unchanged').length;
+
+              // Show tool usage from the first patched result
+              if (patchedResult.tool_steps && patchedResult.tool_steps.length > 0) {
+                for (const step of patchedResult.tool_steps) {
+                  addChat('tool', step);
+                }
+              }
 
               addChat('assistant',
                 `Scan complete. ${patchedCount} file(s) patched, ${unchangedCount} unchanged.\n\n` +
@@ -219,10 +233,12 @@ export default function RunPanel() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: msg.role === 'user' ? 'rgba(0,212,255,0.15)' :
                              msg.role === 'assistant' ? 'rgba(255,140,66,0.15)' :
+                             msg.role === 'tool' ? 'rgba(167,139,250,0.15)' :
                              'var(--surface-2)'
               }}>
                 {msg.role === 'user' && <Send size={11} color="var(--accent-cyan)" />}
                 {msg.role === 'assistant' && <Bot size={12} color="var(--accent-orange)" />}
+                {msg.role === 'tool' && <Microscope size={11} color="var(--accent-purple)" />}
                 {msg.role === 'system' && <Loader size={11} color="var(--text-dim)" />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -230,20 +246,24 @@ export default function RunPanel() {
                   fontSize: '9px', color: 'var(--text-dim)', marginBottom: '2px',
                   textTransform: 'uppercase', letterSpacing: '0.5px'
                 }}>
-                  {msg.role === 'user' ? 'YOU' : msg.role === 'assistant' ? 'GEX AGENT' : 'SYSTEM'}
+                  {msg.role === 'user' ? 'YOU' : msg.role === 'assistant' ? 'GEX AGENT' : msg.role === 'tool' ? 'TOOL' : 'SYSTEM'}
                   <span style={{ marginLeft: '8px', opacity: 0.5 }}>
                     {msg.time.toLocaleTimeString('en-US', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' })}
                   </span>
                 </div>
                 <div style={{
                   fontSize: 'var(--font-size-sm)',
-                  color: msg.role === 'system' ? 'var(--text-muted)' : 'var(--text-primary)',
-                  padding: msg.role === 'assistant' ? '8px' : '4px 0',
-                  background: msg.role === 'assistant' ? 'var(--surface-1)' : 'transparent',
-                  border: msg.role === 'assistant' ? '1px solid var(--border-subtle)' : 'none',
+                  color: msg.role === 'tool' ? 'var(--accent-purple)' :
+                         msg.role === 'system' ? 'var(--text-muted)' : 'var(--text-primary)',
+                  padding: msg.role === 'assistant' ? '8px' : msg.role === 'tool' ? '4px 8px' : '4px 0',
+                  background: msg.role === 'assistant' ? 'var(--surface-1)' :
+                              msg.role === 'tool' ? 'rgba(167,139,250,0.05)' : 'transparent',
+                  border: msg.role === 'assistant' ? '1px solid var(--border-subtle)' :
+                          msg.role === 'tool' ? '1px solid rgba(167,139,250,0.15)' : 'none',
                   borderRadius: 'var(--radius-sm)',
                   whiteSpace: 'pre-wrap',
                   fontStyle: msg.role === 'system' ? 'italic' : 'normal',
+                  fontFamily: msg.role === 'tool' ? 'var(--font-mono)' : 'inherit',
                   lineHeight: '1.5'
                 }}>
                   {msg.content}

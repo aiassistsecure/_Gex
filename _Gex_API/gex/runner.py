@@ -229,8 +229,12 @@ End with a ## Summary of all changes."""
         async with httpx.AsyncClient() as client:
             try:
                 llm_output = ""
+                tool_steps = []
                 async for chunk in self.send_to_llm(client, GEX_SYSTEM_PROMPT, user_prompt, repo_path):
-                    llm_output += chunk + "\n"
+                    if chunk.startswith("[TOOL]"):
+                        tool_steps.append(chunk)
+                    else:
+                        llm_output += chunk + "\n"
             except httpx.HTTPStatusError as e:
                 return FileResult(
                     file=file_path,
@@ -262,6 +266,7 @@ End with a ## Summary of all changes."""
                 before=before,
                 after=before,
                 llm_analysis=llm_output,
+                tool_steps=tool_steps,
             )
 
         # Apply blocks to clone
@@ -302,6 +307,7 @@ End with a ## Summary of all changes."""
             error=error_msg,
             llm_analysis=llm_output,
             apply_results=apply_results,
+            tool_steps=tool_steps,
         )
 
     async def run_repo(
@@ -309,12 +315,14 @@ End with a ## Summary of all changes."""
         repo_path: str,
         focus: str = None,
         mode: str = "sequential",
+        run_id: str = None,
     ) -> AsyncGenerator[tuple[RunState, FileResult], None]:
         """
         Run Gex on an entire repo, yielding per-file results.
         This is the STREAMING GENERATOR that powers live UI updates.
         """
-        run_id = str(uuid.uuid4())[:8]
+        if run_id is None:
+            run_id = str(uuid.uuid4())[:8]
         run_state = RunState(run_id=run_id, state="running", started_at=datetime.now())
 
         # Store run state

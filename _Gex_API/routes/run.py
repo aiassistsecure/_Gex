@@ -79,7 +79,7 @@ async def run_repo(req: RunRepoRequest):
 async def _run_repo_background(runner: GexRunner, run_id: str, req: RunRepoRequest):
     """Background task that processes the repo run."""
     async for run_state, file_result in runner.run_repo(
-        req.repo_path, focus=req.focus, mode=req.mode
+        req.repo_path, focus=req.focus, mode=req.mode, run_id=run_id
     ):
         # Results are stored in the runner's run state
         pass

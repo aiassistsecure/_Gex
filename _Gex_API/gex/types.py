@@ -108,6 +108,7 @@ class FileResult(BaseModel):
     error: Optional[str] = None
     llm_analysis: str = ""
     apply_results: list[ApplyResult] = Field(default_factory=list)
+    tool_steps: list[str] = Field(default_factory=list)
 
 
 class RunState(BaseModel):
