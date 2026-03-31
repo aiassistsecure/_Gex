@@ -87,15 +87,31 @@ export default function RunPanel() {
         />
 
         <div style={{ display: 'flex', gap: '4px' }}>
-          <button className="btn btn-primary" onClick={handleRunFile}
-                  disabled={isRunning || !activeFile} style={{ flex: 1 }}>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleRunFile}
+            disabled={isRunning || !activeFile} 
+            style={{ flex: 1 }}
+            title={!activeFile ? "Select a file from the Explorer first" : "Scan active file"}
+          >
             <Zap size={13} /> SCAN FILE
           </button>
-          <button className="btn btn-cyan" onClick={handleRunRepo}
-                  disabled={isRunning || !repo} style={{ flex: 1 }}>
+          <button 
+            className="btn btn-cyan" 
+            onClick={handleRunRepo}
+            disabled={isRunning || !repo} 
+            style={{ flex: 1 }}
+            title={!repo ? "Wait for workspace to load" : "Scan entire repository"}
+          >
             <Microscope size={13} /> SCAN REPO
           </button>
         </div>
+
+        {!activeFile && repo && (
+          <div style={{ fontSize: '10px', color: 'var(--accent-orange)', marginTop: '4px', textAlign: 'center' }}>
+            Click a file in the File Tree to enable File Scanning.
+          </div>
+        )}
 
         {runState === 'running' && (
           <div style={{ marginTop: '6px' }}>
