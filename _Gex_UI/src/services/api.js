@@ -98,6 +98,13 @@ export async function updateSettings(settings) {
   });
 }
 
+export async function validateApiKey(apiKey) {
+  return request('/settings/validate', {
+    method: 'POST',
+    body: JSON.stringify({ api_key: apiKey }),
+  });
+}
+
 export async function listModels(apiKey = null) {
   const query = apiKey ? `?api_key=${encodeURIComponent(apiKey)}` : '';
   return request(`/settings/models${query}`);

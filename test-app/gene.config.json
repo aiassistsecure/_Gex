@@ -11,7 +11,7 @@
     "devPort": 3000
   },
   "aiassist": {
-    "apiKey": "aai_WsrkQdSo0bl5gjeYnj4_oyaNBI-Pm7Dh4nt2S_h1OY8",
+    "apiKey": "ok you ready to make this mobile friendly and add tabs, or keep it desktop and ship it inside electron for desktop building",
     "provider": "openai",
     "model": "gpt-5.4"
   },

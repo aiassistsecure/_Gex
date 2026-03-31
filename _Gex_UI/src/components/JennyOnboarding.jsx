@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { ExternalLink, ArrowRight, Key, Zap } from 'lucide-react';
-import { updateSettings } from '../services/api';
+import { updateSettings, validateApiKey } from '../services/api';
 import useGexStore from '../store/useGexStore';
 
 const FEATURES = [
@@ -25,11 +25,18 @@ export default function JennyOnboarding({ onComplete }) {
     setSaving(true);
     setError('');
     try {
+      // Validate against AiAssist API before saving
+      const validation = await validateApiKey(key);
+      if (!validation.valid) {
+        setError(validation.error || 'Invalid API key — please check and try again.');
+        return;
+      }
       await updateSettings({ api_key: key });
+      localStorage.setItem('jenny_onboarded', '1');
       addLog('Jenny configured — welcome aboard.', 'success');
       onComplete();
     } catch (e) {
-      setError('Could not save key — is the backend running?');
+      setError('Could not reach backend — is Jenny running?');
     } finally {
       setSaving(false);
     }

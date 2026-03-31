@@ -1,5 +1,5 @@
 {
-  "api_key": "aai_WsrkQdSo0bl5gjeYnj4_oyaNBI-Pm7Dh4nt2S_h1OY8",
+  "api_key": "ok you ready to make this mobile friendly and add tabs, or keep it desktop and ship it inside electron for desktop building",
   "api_base": "https://api.aiassist.net",
   "model": "gpt-5.4",
   "provider": "openai"

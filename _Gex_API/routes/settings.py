@@ -138,3 +138,32 @@ async def list_models(api_key: Optional[str] = None):
             {"id": "openai/gpt-4.1", "name": "GPT-4.1", "provider": "openai"},
         ]
     }
+
+
+@router.post("/validate")
+async def validate_key(req: SettingsUpdate):
+    """Validate an API key by making a real lightweight call to AiAssist."""
+    key = req.api_key
+    if not key or not key.strip():
+        return {"valid": False, "error": "No key provided."}
+
+    settings = load_settings()
+    api_base = req.api_base or settings.get("api_base", "https://api.aiassist.net")
+    api_base = api_base.rstrip("/")
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.get(
+                f"{api_base}/v1/providers",
+                headers={"Authorization": f"Bearer {key.strip()}"},
+            )
+        if res.status_code == 200:
+            return {"valid": True}
+        elif res.status_code in (401, 403):
+            return {"valid": False, "error": "Invalid or expired API key."}
+        else:
+            return {"valid": False, "error": f"API returned {res.status_code} — check your key."}
+    except httpx.TimeoutException:
+        return {"valid": False, "error": "Request timed out — is the backend reachable?"}
+    except Exception as e:
+        return {"valid": False, "error": str(e)}

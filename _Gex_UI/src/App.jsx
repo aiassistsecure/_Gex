@@ -64,13 +64,18 @@ export default function App() {
   // Auto-load workspace from jenny dev + check BYOK
   useEffect(() => {
     (async () => {
-      try {
-        // Check if API key is configured
-        const settings = await getSettings();
-        if (!settings?.api_key) {
-          setShowOnboarding(true);
-        }
-      } catch { /* backend not yet ready */ }
+      // localStorage is the reliable signal — backend can restart cold
+      const onboarded = localStorage.getItem('jenny_onboarded');
+      if (!onboarded) {
+        try {
+          const settings = await getSettings();
+          if (!settings?.api_key_set) {
+            setShowOnboarding(true);
+          } else {
+            localStorage.setItem('jenny_onboarded', '1');
+          }
+        } catch { setShowOnboarding(true); }
+      }
 
       try {
         const ws = await getWorkspace();
