@@ -2,11 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import './index.css';
 import useGexStore from './store/useGexStore';
 import { loadRepo, getWorkspace, geneCLI } from './services/api';
-import { Monitor, Play, Package, Info } from 'lucide-react';
+import { Play, Package, Info } from 'lucide-react';
 import ActivityBar from './components/ActivityBar';
 import FileTree from './components/FileTree';
 import EditorPanel from './components/EditorPanel';
-import PreviewPanel from './components/PreviewPanel';
 import RunPanel from './components/RunPanel';
 import StatusBar from './components/StatusBar';
 import CommandPalette from './components/CommandPalette';
@@ -19,14 +18,12 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [activeView, setActiveView] = useState('explorer');
   const [showCommand, setShowCommand] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
   const [cliRunning, setCliRunning] = useState(null);
 
   // Resizable layout state
   const [sidebarWidth, setSidebarWidth] = useState(240);
-  const [rightPanelWidth, setRightPanelWidth] = useState(320);
-  const [previewWidth, setPreviewWidth] = useState(45); // percentage
-  const [terminalHeight, setTerminalHeight] = useState(220); // pass this to TerminalPanel if needed, or host it here.
+  const [rightPanelWidth, setRightPanelWidth] = useState(360);
+  const [terminalHeight, setTerminalHeight] = useState(220);
 
   // Resize Handlers
   const startResizing = useCallback((type) => (e) => {
@@ -37,17 +34,12 @@ export default function App() {
     const startSidebar = sidebarWidth;
     const startRight = rightPanelWidth;
     const startTerm = terminalHeight;
-    const editorSplitWidth = e.target.parentElement.clientWidth;
-    const startPrev = previewWidth;
 
     const onMouseMove = (moveEvent) => {
       if (type === 'sidebar') {
         setSidebarWidth(Math.max(160, Math.min(600, startSidebar + (moveEvent.clientX - startX))));
       } else if (type === 'rightPanel') {
-        setRightPanelWidth(Math.max(200, Math.min(800, startRight - (moveEvent.clientX - startX))));
-      } else if (type === 'preview') {
-        const delta = ((startX - moveEvent.clientX) / editorSplitWidth) * 100;
-        setPreviewWidth(Math.max(20, Math.min(80, startPrev + delta)));
+        setRightPanelWidth(Math.max(280, Math.min(900, startRight - (moveEvent.clientX - startX))));
       } else if (type === 'terminal') {
         setTerminalHeight(Math.max(100, Math.min(800, startTerm - (moveEvent.clientY - startY))));
       }
@@ -61,10 +53,10 @@ export default function App() {
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-    
+
     if (type === 'terminal') document.body.style.cursor = 'row-resize';
     else document.body.style.cursor = 'col-resize';
-  }, [sidebarWidth, rightPanelWidth, previewWidth, terminalHeight]);
+  }, [sidebarWidth, rightPanelWidth, terminalHeight]);
 
 
   // Auto-load workspace from gene dev
@@ -172,10 +164,6 @@ export default function App() {
                   disabled={loading || !repoPath.trim()}>
             {loading ? 'LOADING...' : 'LOAD'}
           </button>
-          <button className="btn-icon btn" onClick={() => setShowPreview(v => !v)}
-                  title={showPreview ? 'Hide Preview' : 'Show Preview'}>
-            <Monitor size={14} />
-          </button>
         </div>
       </header>
 
@@ -240,14 +228,6 @@ export default function App() {
             <div className="editor-pane">
               <EditorPanel />
             </div>
-            {showPreview && (
-              <>
-                <div className="resize-handle" onMouseDown={startResizing('preview')} />
-                <div className="preview-pane" style={{ width: `${previewWidth}%` }}>
-                  <PreviewPanel />
-                </div>
-              </>
-            )}
           </div>
           <TerminalPanel height={terminalHeight} onResizeStart={startResizing('terminal')} />
         </div>

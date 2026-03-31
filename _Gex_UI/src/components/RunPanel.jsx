@@ -7,7 +7,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Microscope, Download, Send, Bot, Loader } from 'lucide-react';
 import useGexStore from '../store/useGexStore';
 import { runFile, runRepo, getRunStatus } from '../services/api';
-import CircuitDiffViewer from './CircuitDiffViewer';
 import { API_BASE } from '../services/api';
 
 export default function RunPanel() {
@@ -28,6 +27,7 @@ export default function RunPanel() {
     setLastResult,
     setResults,
     setActiveFile,
+    setEditorMode,
     updateRunProgress,
     results: storeResults,
   } = useGexStore();
@@ -61,11 +61,11 @@ export default function RunPanel() {
       }
 
       if (result.status === 'patched') {
-        // Auto-load the pre-patch content into the editor so Monaco DiffEditor has both sides
         if (result.before !== undefined) {
           setActiveFile(activeFile, result.before);
         }
-        addChat('assistant', result.llm_analysis || 'Changes generated. Review the diff below.');
+        setEditorMode('patches');
+        addChat('assistant', result.llm_analysis || 'Changes generated — review them in the PATCHES tab.');
       } else if (result.status === 'unchanged') {
         addChat('assistant', result.llm_analysis || 'No changes needed — code looks correct.');
       } else {
@@ -130,16 +130,15 @@ export default function RunPanel() {
           const errors = results.filter(r => r.status === 'error');
 
           if (patched.length > 0) {
-            // Auto-open the first patched file so the editor + diff view activate
             const first = patched[0];
             const fullPath = `${repo.path}/${first.file}`.replace(/[\/]+/g, '/');
             if (first.before !== undefined) {
               setActiveFile(fullPath, first.before);
             }
+            setEditorMode('patches');
             addChat('assistant',
-              `Agent concluded thinking. Found ${patched.length} file(s) to modify.` +
-              (patched.length > 1 ? `\n\nPatched: ${patched.map(r => r.file).join(', ')}` : '') +
-              (first.llm_analysis ? `\n\n${first.llm_analysis}` : '')
+              `Agent concluded. ${patched.length} file(s) ready for review in PATCHES tab.` +
+              (patched.length > 1 ? `\n\nFiles: ${patched.map(r => r.file).join(', ')}` : '')
             );
           } else if (errors.length > 0) {
             const firstErr = errors[0].error || 'Analysis failed.';
@@ -220,23 +219,6 @@ export default function RunPanel() {
                   fontFamily: msg.role === 'tool' ? 'var(--font-mono)' : 'inherit',
                 }}>
                   {msg.content}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Render Multi-Diffs */}
-          {runState === 'completed' && storeResults?.filter(r => r.status === 'patched').map((res, i) => (
-            <div key={i} style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '4px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,230,138,0.15)' }}>
-                <Bot size={12} color="var(--accent-green)" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '9px', color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase' }}>
-                   PATCH — {res.file}
-                </div>
-                <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-sm)', padding: '8px', border: '1px solid var(--border-subtle)' }}>
-                   <CircuitDiffViewer result={res} />
                 </div>
               </div>
             </div>

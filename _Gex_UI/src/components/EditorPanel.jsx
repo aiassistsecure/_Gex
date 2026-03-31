@@ -7,6 +7,8 @@ import { FileCode } from 'lucide-react';
 import Editor, { DiffEditor, loader } from '@monaco-editor/react';
 import useGexStore from '../store/useGexStore';
 import { saveFile } from '../services/api';
+import PreviewPanel from './PreviewPanel';
+import CircuitDiffViewer from './CircuitDiffViewer';
 
 // Gex-Gel Theme — motherboard chipset palette
 const GEX_THEME = {
@@ -74,8 +76,14 @@ function detectLanguage(fp) {
 }
 
 export default function EditorPanel() {
-  const { activeFile, activeFileContent, editorMode, setEditorMode, lastResult, setActiveFile } = useGexStore();
+  const {
+    activeFile, activeFileContent, editorMode, setEditorMode,
+    lastResult, setActiveFile, results: storeResults,
+  } = useGexStore();
   const saveTimeoutRef = useRef(null);
+
+  const pendingPatches = (storeResults || []).filter(r => r.status === 'patched' && r.diff?.hunks?.length);
+  const patchCount = pendingPatches.length;
 
   const ensureTheme = useCallback((monaco) => {
     monaco.editor.defineTheme('gex-gel', GEX_THEME);
@@ -107,7 +115,7 @@ export default function EditorPanel() {
           </div>
         )}
 
-        {/* Mode toggle */}
+        {/* Mode toggle — EDIT / DIFF / PATCHES / PREVIEW */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '2px', padding: '0 8px' }}>
           <button
             className={`btn btn-sm ${editorMode === 'edit' ? 'btn-primary' : ''}`}
@@ -120,16 +128,92 @@ export default function EditorPanel() {
             className={`btn btn-sm ${editorMode === 'diff' ? 'btn-cyan' : ''}`}
             onClick={() => setEditorMode('diff')}
             disabled={!hasDiff}
-            style={{ borderRadius: '0 3px 3px 0' }}
+            style={{ borderRadius: '0' }}
           >
             DIFF
+          </button>
+          <button
+            className={`btn btn-sm ${editorMode === 'patches' ? 'btn-primary' : ''}`}
+            onClick={() => setEditorMode('patches')}
+            style={{
+              borderRadius: '0',
+              ...(editorMode !== 'patches' && patchCount > 0 ? {
+                color: 'var(--accent-orange)',
+                borderColor: 'rgba(255,140,66,0.4)',
+              } : {}),
+              position: 'relative',
+            }}
+          >
+            PATCHES
+            {patchCount > 0 && (
+              <span style={{
+                marginLeft: '5px',
+                background: 'var(--accent-orange)',
+                color: '#000',
+                borderRadius: '8px',
+                fontSize: '9px',
+                fontWeight: 700,
+                padding: '0 5px',
+                lineHeight: '14px',
+                display: 'inline-block',
+              }}>
+                {patchCount}
+              </span>
+            )}
+          </button>
+          <button
+            className={`btn btn-sm ${editorMode === 'preview' ? 'btn-green' : ''}`}
+            onClick={() => setEditorMode('preview')}
+            style={{ borderRadius: '0 3px 3px 0' }}
+          >
+            PREVIEW
           </button>
         </div>
       </div>
 
-      {/* Editor Area */}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {!activeFile ? (
+      {/* Content Area */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {editorMode === 'preview' ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <PreviewPanel />
+          </div>
+
+        ) : editorMode === 'patches' ? (
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: 'var(--surface-0)' }}>
+            {pendingPatches.length === 0 ? (
+              <div className="empty-state">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <h3>No Pending Patches</h3>
+                <p>Run Gex on a file or repo — proposed changes will appear here for review.</p>
+              </div>
+            ) : (
+              pendingPatches.map((res, i) => (
+                <div key={i} style={{ marginBottom: '24px' }}>
+                  <div style={{
+                    fontSize: 'var(--font-size-xs)', fontWeight: 600,
+                    color: 'var(--text-muted)', textTransform: 'uppercase',
+                    letterSpacing: '1px', marginBottom: '8px',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                  }}>
+                    <span style={{ color: 'var(--accent-orange)' }}>◈</span>
+                    {res.file}
+                  </div>
+                  <div style={{
+                    background: 'var(--surface-1)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '12px',
+                  }}>
+                    <CircuitDiffViewer result={res} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+        ) : !activeFile ? (
           <div className="empty-state">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             <h3>Select a File</h3>

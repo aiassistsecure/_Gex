@@ -82,6 +82,14 @@ const useGexStore = create((set, get) => ({
     });
   },
 
+  // Mark a result as fully applied so it drops out of the pending patches list
+  markResultApplied: (file) => set((state) => ({
+    results: (state.results || []).map(r =>
+      r.file === file ? { ...r, status: 'applied' } : r
+    ),
+    fileStatuses: { ...state.fileStatuses, [file]: 'applied' },
+  })),
+
   addLog: (message, level = 'info') => set((state) => ({
     logs: [...state.logs, { message, level, time: new Date().toISOString() }],
   })),
