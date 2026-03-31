@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import './index.css';
 import useGexStore from './store/useGexStore';
-import { loadRepo, getWorkspace, geneCLI } from './services/api';
+import { loadRepo, getWorkspace, geneCLI, getSettings } from './services/api';
 import { Play, Package, Info } from 'lucide-react';
 import ActivityBar from './components/ActivityBar';
 import FileTree from './components/FileTree';
@@ -11,14 +11,16 @@ import StatusBar from './components/StatusBar';
 import CommandPalette from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
 import TerminalPanel from './components/TerminalPanel';
+import JennyOnboarding from './components/JennyOnboarding';
 
 export default function App() {
   const { repo, setRepo, addLog, showSettings } = useGexStore();
-  const [repoPath, setRepoPath] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [repoPath, setRepoPath]     = useState('');
+  const [loading, setLoading]       = useState(false);
   const [activeView, setActiveView] = useState('explorer');
   const [showCommand, setShowCommand] = useState(false);
   const [cliRunning, setCliRunning] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Resizable layout state
   const [sidebarWidth, setSidebarWidth] = useState(240);
@@ -59,19 +61,25 @@ export default function App() {
   }, [sidebarWidth, rightPanelWidth, terminalHeight]);
 
 
-  // Auto-load workspace from gene dev
+  // Auto-load workspace from jenny dev + check BYOK
   useEffect(() => {
     (async () => {
       try {
+        // Check if API key is configured
+        const settings = await getSettings();
+        if (!settings?.api_key) {
+          setShowOnboarding(true);
+        }
+      } catch { /* backend not yet ready */ }
+
+      try {
         const ws = await getWorkspace();
         if (ws.workspace && ws.exists) {
-          addLog(`Gene workspace detected: ${ws.workspace}`, 'info');
+          addLog(`Jenny workspace detected: ${ws.workspace}`, 'info');
           setRepoPath(ws.workspace);
           handleLoadRepo(ws.workspace);
         }
-      } catch {
-        // API not ready or not launched via gene dev
-      }
+      } catch { /* not launched via jenny dev */ }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -107,18 +115,22 @@ export default function App() {
 
   const handleCLI = useCallback(async (action) => {
     setCliRunning(action);
-    addLog(`[gene ${action}] Starting...`, 'info');
+    addLog(`[jenny ${action}] Starting...`, 'info');
     try {
       const result = await geneCLI(action);
       if (result.exit_code === 0) {
-        addLog(`[gene ${action}] Complete`, 'success');
-        if (result.stdout) addLog(result.stdout.trim(), 'dim');
+        addLog(`[jenny ${action}] Complete`, 'success');
+        // Show only the last meaningful line of stdout (skip PyInstaller noise)
+        if (result.stdout) {
+          const lines = result.stdout.trim().split('\n').filter(l => l.trim() && !l.includes('pip install') && !l.includes('Try running') && !l.includes('Make sure'));
+          if (lines.length) addLog(lines[lines.length - 1].trim(), 'dim');
+        }
       } else {
-        addLog(`[gene ${action}] Failed (exit ${result.exit_code})`, 'error');
-        if (result.stderr) addLog(result.stderr.trim(), 'error');
+        addLog(`[jenny ${action}] Failed (exit ${result.exit_code})`, 'error');
+        if (result.stderr) addLog(result.stderr.split('\n').filter(l => l.trim()).slice(-3).join(' | '), 'error');
       }
     } catch (err) {
-      addLog(`[gene ${action}] Error: ${err.message}`, 'error');
+      addLog(`[jenny ${action}] Error: ${err.message}`, 'error');
     } finally {
       setCliRunning(null);
     }
@@ -126,11 +138,16 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {/* Jenny BYOK Onboarding — first launch only */}
+      {showOnboarding && (
+        <JennyOnboarding onComplete={() => setShowOnboarding(false)} />
+      )}
       {/* Title Bar */}
       <header className="titlebar">
         <div className="titlebar-brand">
-          <h1>_GEX</h1>
-          <span className="version">v1.0.0</span>
+          <img src="/jenny-logo.png" alt="AiAssist" style={{ width: '20px', height: '20px', borderRadius: '4px', marginRight: '8px' }} onError={e => e.target.style.display='none'} />
+          <h1>_Gex &amp; Jenny</h1>
+          <span className="version">by AiAssist SECURE</span>
           {repo && (
             <span style={{
               fontSize: 'var(--font-size-xs)', color: 'var(--accent-orange)',
@@ -176,7 +193,7 @@ export default function App() {
             <span className="sidebar-title">
               {activeView === 'explorer' && 'Explorer'}
               {activeView === 'search' && 'Search'}
-              {activeView === 'gene' && 'Gene CLI'}
+              {activeView === 'jenny' && 'Jenny CLI'}
             </span>
           </div>
           <div className="sidebar-content">
@@ -186,7 +203,7 @@ export default function App() {
                 <input className="input input-sm" placeholder="Search in files..." />
               </div>
             )}
-            {activeView === 'gene' && (
+            {activeView === 'jenny' && (
               <div style={{ padding: '12px' }}>
                 <div style={{ marginBottom: '14px' }}>
                   <span className="panel-label">Project Actions</span>
@@ -194,17 +211,17 @@ export default function App() {
 
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: '6px' }}
                   onClick={() => handleCLI('build')} disabled={!!cliRunning}>
-                  <Play size={13} /> {cliRunning === 'build' ? 'Building...' : 'gene build'}
+                  <Play size={13} /> {cliRunning === 'build' ? 'Building...' : 'jenny build'}
                 </button>
 
                 <button className="btn btn-cyan" style={{ width: '100%', marginBottom: '6px' }}
                   onClick={() => handleCLI('package')} disabled={!!cliRunning}>
-                  <Package size={13} /> {cliRunning === 'package' ? 'Packaging...' : 'gene package'}
+                  <Package size={13} /> {cliRunning === 'package' ? 'Packaging...' : 'jenny package'}
                 </button>
 
                 <button className="btn" style={{ width: '100%', marginBottom: '16px' }}
                   onClick={() => handleCLI('info')} disabled={!!cliRunning}>
-                  <Info size={13} /> gene info
+                  <Info size={13} /> jenny info
                 </button>
 
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>

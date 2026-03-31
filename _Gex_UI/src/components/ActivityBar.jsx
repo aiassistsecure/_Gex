@@ -7,7 +7,7 @@ import { FolderOpen, Search, Terminal, Settings } from 'lucide-react';
 const ITEMS = [
   { id: 'explorer', label: 'Explorer', Icon: FolderOpen },
   { id: 'search', label: 'Search', Icon: Search },
-  { id: 'gene', label: 'Gene CLI', Icon: Terminal },
+  { id: 'jenny', label: 'Jenny CLI', Icon: Terminal },
 ];
 
 export default function ActivityBar({ active, onSelect }) {

@@ -43,7 +43,7 @@ export default function StatusBar() {
         <span className="statusbar-item">
           <span style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>_Gex</span>
           {' | '}
-          <span style={{ color: 'var(--accent-cyan)' }}>Gene</span>
+          <span style={{ color: 'var(--accent-cyan)' }}>Jenny</span>
         </span>
 
         <span className="statusbar-item" style={{ color: 'var(--text-dim)' }}>
