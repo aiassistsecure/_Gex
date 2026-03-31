@@ -1,52 +1,53 @@
 /**
- * RunPanel v1.0.0 -- Bloomberg Terminal-style run engine (no emojis)
+ * RunPanel (Agentic Chat UI) v2.0.0
+ * Converts the old targeting engine into a conversational IDE interface
  */
 import { useState } from 'react';
+import { Zap, Microscope, Download, Send, Bot, User } from 'lucide-react';
 import useGexStore from '../store/useGexStore';
-import { runFile, runRepo, API_BASE } from '../services/api';
+import { runFile, runRepo } from '../services/api';
 import CircuitDiffViewer from './CircuitDiffViewer';
-import { Zap, Microscope, Download, X } from 'lucide-react';
+import { API_BASE } from '../services/api';
 
 export default function RunPanel() {
-  const {
-    repo, activeFile, runState, progress, processedFiles, totalFiles,
-    lastResult, logs,
-    addLog, setLastResult, setRunState, startRun, completeRun, failRun,
-  } = useGexStore();
-
   const [focus, setFocus] = useState('');
   const [isRunning, setIsRunning] = useState(false);
 
+  const {
+    repo,
+    activeFile,
+    runState,
+    progress,
+    totalFiles,
+    processedFiles,
+    lastResult,
+    startRun,
+    completeRun,
+    failRun,
+    addLog,
+  } = useGexStore();
+
   const handleRunFile = async () => {
-    if (!repo || !activeFile) return addLog('Select a repo and file first', 'error');
+    if (!activeFile) return;
 
     setIsRunning(true);
-    setRunState('running');
-    const name = activeFile.split(/[\\/]/).pop();
-    addLog(`[scan] ${name}`, 'info');
+    addLog(`[scan] Targeting: ${activeFile}`, 'info');
+    startRun(null, 1);
 
     try {
       const result = await runFile(repo.path, activeFile, focus || null);
-      setLastResult(result);
-      setRunState('completed');
-
-      if (result.status === 'patched') {
-        addLog(`[ok] ${result.blocks_applied} patch(es) ready for review`, 'success');
-      } else if (result.status === 'unchanged') {
-        addLog('[--] No changes needed', 'dim');
-      } else if (result.status === 'error') {
-        addLog(`[err] ${result.error}`, 'error');
-      }
+      addLog(`[ok] Run completed: ${result.run_id}`, 'info');
+      completeRun();
     } catch (err) {
       addLog(`[err] ${err.message}`, 'error');
-      setRunState('failed');
+      failRun(err.message);
     } finally {
       setIsRunning(false);
     }
   };
 
   const handleRunRepo = async () => {
-    if (!repo) return addLog('Load a repo first', 'error');
+    if (!repo) return;
 
     setIsRunning(true);
     addLog(`[scan] Full scan: ${repo.name}`, 'info');
@@ -69,58 +70,23 @@ export default function RunPanel() {
       {/* Header */}
       <div className="panel-section">
         <div className="panel-section-header">
-          <span className="panel-label">Run Engine</span>
+          <span className="panel-label">Agentic IDE</span>
           <span className={`run-indicator ${runState}`}>
-            {runState === 'idle' && 'IDLE'}
-            {runState === 'running' && 'RUNNING'}
+            {runState === 'idle' && 'READY'}
+            {runState === 'running' && 'THINKING'}
             {runState === 'completed' && 'DONE'}
             {runState === 'failed' && 'FAILED'}
           </span>
         </div>
 
-        <input
-          className="input input-sm"
-          placeholder="Focus: 'fix auth bug', 'optimize queries'..."
-          value={focus}
-          onChange={(e) => setFocus(e.target.value)}
-          style={{ marginBottom: '6px' }}
-        />
-
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <button 
-            className="btn btn-primary" 
-            onClick={handleRunFile}
-            disabled={isRunning || !activeFile} 
-            style={{ flex: 1 }}
-            title={!activeFile ? "Select a file from the Explorer first" : "Scan active file"}
-          >
-            <Zap size={13} /> SCAN FILE
-          </button>
-          <button 
-            className="btn btn-cyan" 
-            onClick={handleRunRepo}
-            disabled={isRunning || !repo} 
-            style={{ flex: 1 }}
-            title={!repo ? "Wait for workspace to load" : "Scan entire repository"}
-          >
-            <Microscope size={13} /> SCAN REPO
-          </button>
-        </div>
-
-        {!activeFile && repo && (
-          <div style={{ fontSize: '10px', color: 'var(--accent-orange)', marginTop: '4px', textAlign: 'center' }}>
-            Click a file in the File Tree to enable File Scanning.
-          </div>
-        )}
-
         {runState === 'running' && (
-          <div style={{ marginTop: '6px' }}>
-            <div className="progress-track">
+          <div style={{ marginTop: '0px' }}>
+            <div className="progress-track" style={{ marginBottom: '4px' }}>
               <div className={`progress-fill ${totalFiles === 0 ? 'indeterminate' : ''}`}
                    style={{ width: `${Math.max(progress * 100, 2)}%` }} />
             </div>
             {totalFiles > 0 && (
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-dim)', marginTop: '2px' }}>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-dim)', marginTop: '2px', textAlign: 'right' }}>
                 {processedFiles}/{totalFiles} files
               </div>
             )}
@@ -128,98 +94,107 @@ export default function RunPanel() {
         )}
       </div>
 
-      {/* Bloomberg Data Grid */}
-      {lastResult && (
-        <div className="panel-section">
-          <span className="panel-label" style={{ marginBottom: '6px', display: 'block' }}>Last Run</span>
-          <div className="data-grid">
-            <div className="data-cell">
-              <div className="data-cell-label">Status</div>
-              <div className={`data-cell-value ${
-                lastResult.status === 'patched' ? 'positive' :
-                lastResult.status === 'error' ? 'negative' : ''
-              }`}>
-                {lastResult.status?.toUpperCase()}
-              </div>
-            </div>
-            <div className="data-cell">
-              <div className="data-cell-label">Patches</div>
-              <div className="data-cell-value highlight">{lastResult.blocks_applied || 0}</div>
-            </div>
-            <div className="data-cell">
-              <div className="data-cell-label">File</div>
-              <div className="data-cell-value truncate" title={lastResult.file}>
-                {lastResult.file?.split(/[\\/]/).pop()}
-              </div>
-            </div>
-            <div className="data-cell">
-              <div className="data-cell-label">Additions</div>
-              <div className="data-cell-value positive">
-                +{lastResult.diff?.total_additions || 0}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Chat / Diffs Area */}
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', background: 'var(--surface-0)' }}>
+        <div style={{ padding: '12px', flex: 1 }}>
+          {/* We will eventually render real Chat messages here. For now, we render the agent's last result output to fulfill the structure. */}
+          {lastResult && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Bot size={14} color="var(--accent-orange)" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>GEX AGENT</div>
+                  
+                  {lastResult.llm_analysis && (
+                    <div style={{
+                      fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)',
+                      padding: '10px', background: 'var(--surface-1)', borderRadius: 'var(--radius-sm)',
+                      marginBottom: '8px', whiteSpace: 'pre-wrap', border: '1px solid var(--border-subtle)'
+                    }}>
+                      {lastResult.llm_analysis}
+                    </div>
+                  )}
 
-      {/* Download */}
-      {repo && (
-        <div className="panel-section" style={{ padding: '6px 12px' }}>
-          <button
-            className="btn btn-green btn-sm"
-            onClick={() => window.open(`${API_BASE}/repo/download?path=${encodeURIComponent(repo.path)}`)}
-            style={{ width: '100%' }}
+                  <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-sm)', padding: '8px', border: '1px solid var(--border-subtle)' }}>
+                     <CircuitDiffViewer />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {!lastResult && (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: 'var(--font-size-sm)', textAlign: 'center', padding: '20px' }}>
+              How can I help you improve<br/>this codebase today?
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Input / Control Area (Moved to bottom) */}
+      <div style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--surface-0)', padding: '12px' }}>
+        
+        <div style={{ position: 'relative', marginBottom: '8px' }}>
+          <textarea
+            className="input"
+            disabled={isRunning}
+            placeholder="What should we build or fix? (e.g. 'Fix the auth bug in app.py')"
+            value={focus}
+            onChange={(e) => setFocus(e.target.value)}
+            style={{ 
+              minHeight: '80px', 
+              paddingRight: '36px', 
+              resize: 'none',
+              background: 'var(--surface-1)'
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleRunFile}
+            disabled={isRunning || !activeFile || !focus.trim()} 
+            style={{ flex: 1 }}
+            title={!activeFile ? "Select a file from the Explorer first" : "Send instruction targeted at active file"}
           >
-            <Download size={13} /> DOWNLOAD PATCHED ZIP
+            <Send size={13} style={{ marginRight: '4px' }} /> File
+          </button>
+          <button 
+            className="btn btn-cyan" 
+            onClick={handleRunRepo}
+            disabled={isRunning || !repo || !focus.trim()} 
+            style={{ flex: 1 }}
+            title={!repo ? "Wait for workspace to load" : "Send instruction to search entire repository"}
+          >
+            <Microscope size={13} style={{ marginRight: '4px' }} /> Repo
           </button>
         </div>
-      )}
 
-      {/* Diff Hunks */}
-      <div className="panel-section" style={{ flex: 1, overflow: 'auto', borderBottom: 'none' }}>
-        <CircuitDiffViewer />
+        {!activeFile && repo && (
+          <div style={{ fontSize: '10px', color: 'var(--accent-orange)', marginTop: '8px', textAlign: 'center' }}>
+            Click a file in the File Tree to target it, or use Repo mode.
+          </div>
+        )}
 
-        {lastResult?.llm_analysis && (
-          <details style={{ marginTop: '8px' }}>
-            <summary style={{
-              fontSize: 'var(--font-size-xs)', color: 'var(--text-dim)',
-              cursor: 'pointer', fontWeight: 600, textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}>
-              LLM Analysis
-            </summary>
-            <div style={{
-              fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)',
-              padding: '8px', background: 'var(--void)', borderRadius: 'var(--radius-xs)',
-              marginTop: '4px', whiteSpace: 'pre-wrap', maxHeight: '200px', overflow: 'auto',
-            }}>
-              {lastResult.llm_analysis}
-            </div>
-          </details>
+        {/* Global Action / Fallback */}
+        {repo && lastResult && (
+          <div style={{ marginTop: '12px' }}>
+            <button
+              className="btn btn-green btn-sm"
+              onClick={() => window.open(`${API_BASE}/repo/download?path=${encodeURIComponent(repo.path)}`)}
+              style={{ width: '100%' }}
+            >
+              <Download size={13} /> DOWNLOAD PATCHED ZIP
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Logs */}
-      <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '6px 12px 0' }}>
-        <div className="flex items-center justify-between" style={{ marginBottom: '4px' }}>
-          <span className="panel-label" style={{ fontSize: 'var(--font-size-xs)' }}>Terminal</span>
-          <button className="btn btn-sm" onClick={() => useGexStore.getState().clearLogs()}>Clear</button>
-        </div>
-      </div>
-      <div className="log-output" style={{ margin: '0 12px 8px', maxHeight: '150px', minHeight: '80px' }}>
-        {logs.length === 0 ? (
-          <span style={{ color: 'var(--text-dim)' }}>Waiting for operations...</span>
-        ) : (
-          logs.map((log, i) => (
-            <div key={i} className={`log-line ${log.level}`}>
-              <span className="log-time">
-                {new Date(log.time).toLocaleTimeString('en-US', { hour12: false })}
-              </span>
-              <span className="log-msg">{log.message}</span>
-            </div>
-          ))
-        )}
-      </div>
     </div>
   );
 }

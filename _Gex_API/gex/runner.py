@@ -88,27 +88,74 @@ class GexRunner:
         return headers
 
     async def send_to_llm(
-        self, client: httpx.AsyncClient, system_prompt: str, user_msg: str
-    ) -> str:
-        """Send a prompt to the LLM and return the response."""
-        payload = {
-            "model": self.config.model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_msg},
-            ],
-            "temperature": 0.2,
-            "max_tokens": 16384,
-        }
-        resp = await client.post(
-            f"{self.config.api_base}/v1/chat/completions",
-            json=payload,
-            headers=self.get_auth_headers(),
-            timeout=120,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"] or ""
+        self, client: httpx.AsyncClient, system_prompt: str, user_msg: str, repo_path: str
+    ) -> AsyncGenerator[str, None]:
+        """Send a prompt to the LLM and yield intermediate tool usage until final output."""
+        from .agent import AGENT_TOOLS, execute_tool
+        
+        # Determine if we should include tavily_search based on our custom search implementation, 
+        # but for now we just use the 2 basic tools.
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_msg},
+        ]
+        
+        loop_count = 0
+        max_loops = 15
+        
+        while loop_count < max_loops:
+            payload = {
+                "model": self.config.model,
+                "messages": messages,
+                "tools": AGENT_TOOLS,
+                "tool_choice": "auto",
+                "temperature": 0.2,
+                "max_tokens": 16384,
+            }
+
+            resp = await client.post(
+                f"{self.config.api_base}/v1/chat/completions",
+                json=payload,
+                headers=self.get_auth_headers(),
+                timeout=120,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            message = data["choices"][0]["message"]
+            
+            tool_calls = message.get("tool_calls", [])
+            
+            if not tool_calls:
+                yield message.get("content", "")
+                break
+                
+            messages.append(message)
+            
+            for tool_call in tool_calls:
+                fn_name = tool_call["function"]["name"]
+                try:
+                    args = json.loads(tool_call["function"]["arguments"])
+                except:
+                    args = {}
+                    
+                # Yield intermediate status to caller
+                if fn_name == "read_file":
+                    yield f"[TOOL] Reading {args.get('path')}..."
+                elif fn_name == "search_files":
+                    yield f"[TOOL] Searching for '{args.get('pattern')}'..."
+                    
+                result = execute_tool(repo_path, fn_name, args)
+                
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call["id"],
+                    "content": result
+                })
+                
+            loop_count += 1
+            
+        if loop_count >= max_loops:
+            yield "LLM tool loop exceeded maximum iterations. Force stopped."
 
     def clone_repo(self, source: str) -> str:
         """Clone a repo to a parallel _gex directory."""
@@ -181,7 +228,9 @@ End with a ## Summary of all changes."""
 
         async with httpx.AsyncClient() as client:
             try:
-                llm_output = await self.send_to_llm(client, GEX_SYSTEM_PROMPT, user_prompt)
+                llm_output = ""
+                async for chunk in self.send_to_llm(client, GEX_SYSTEM_PROMPT, user_prompt, repo_path):
+                    llm_output += chunk + "\n"
             except httpx.HTTPStatusError as e:
                 return FileResult(
                     file=file_path,

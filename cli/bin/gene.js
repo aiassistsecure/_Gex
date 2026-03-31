@@ -81,7 +81,7 @@ program
     const fs = await import('fs');
     const path = await import('path');
 
-    console.log(chalk.bold('\n🧬 Gene Environment\n'));
+    console.log(chalk.bold('\nGene Environment\n'));
 
     // Check for gene.config.json
     const configPath = path.join(process.cwd(), 'gene.config.json');

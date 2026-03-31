@@ -14,6 +14,7 @@ import RunPanel from './components/RunPanel';
 import StatusBar from './components/StatusBar';
 import CommandPalette from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
+import TerminalPanel from './components/TerminalPanel';
 
 export default function App() {
   const { repo, setRepo, addLog, showSettings } = useGexStore();
@@ -204,6 +205,7 @@ export default function App() {
               </>
             )}
           </div>
+          <TerminalPanel />
         </div>
 
         <RunPanel />
