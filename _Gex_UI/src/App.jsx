@@ -174,19 +174,54 @@ export default function App() {
         </div>
 
         <div className="titlebar-actions">
+          {/* Hidden fallback for browser dev mode */}
+          <input
+            id="folder-picker" type="file" webkitdirectory=""
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              if (e.target.files?.length) {
+                const file = e.target.files[0];
+                const dir = file.path
+                  ? file.path.substring(0, file.path.lastIndexOf(file.name) - 1)
+                  : file.webkitRelativePath.split('/')[0];
+                setRepoPath(dir);
+                handleLoadRepo(dir);
+              }
+            }}
+          />
+          <button
+            className="btn btn-sm"
+            disabled={loading}
+            title="Browse local folder"
+            onClick={async () => {
+              if (window.gene?.invoke) {
+                const result = await window.gene.invoke('app:open-directory-dialog', { title: 'Open Project Folder', buttonLabel: 'Open' });
+                if (!result.canceled && result.filePaths?.[0]) {
+                  const dir = result.filePaths[0];
+                  setRepoPath(dir);
+                  handleLoadRepo(dir);
+                }
+              } else {
+                document.getElementById('folder-picker').click();
+              }
+            }}
+          >
+            📂
+          </button>
           <input
             className="input input-sm"
-            placeholder="repo path or GitHub URL"
+            placeholder="GitHub URL or path..."
             value={repoPath}
             onChange={(e) => setRepoPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLoadRepo()}
-            style={{ width: '240px' }}
+            style={{ width: '200px' }}
           />
           <button className="btn btn-primary btn-sm" onClick={() => handleLoadRepo()}
                   disabled={loading || !repoPath.trim()}>
-            {loading ? 'LOADING...' : 'LOAD'}
+            {loading ? '...' : 'Load'}
           </button>
         </div>
+
       </header>
 
       {/* Main Content */}
