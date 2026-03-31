@@ -62,6 +62,14 @@ export async function runFile(repoPath, filePath, focus = null) {
   });
 }
 
+export async function applyPatches(payload) {
+  // payload: { file_path, accepted_hunks: [0, 1], hunks: [...] }
+  return request('/run/apply', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function runRepo(repoPath, focus = null, mode = 'sequential') {
   return request('/run/repo', {
     method: 'POST',
@@ -77,17 +85,6 @@ export async function getRunDiffs(runId) {
   return request(`/run/${runId}/diffs`);
 }
 
-export async function applyPatches(filePath, acceptedHunks, hunks) {
-  return request('/run/apply', {
-    method: 'POST',
-    body: JSON.stringify({
-      file_path: filePath,
-      accepted_hunks: acceptedHunks,
-      hunks: hunks,
-    }),
-  });
-}
-
 // ── Settings ──
 
 export async function getSettings() {
@@ -101,8 +98,9 @@ export async function updateSettings(settings) {
   });
 }
 
-export async function listModels() {
-  return request('/settings/models');
+export async function listModels(apiKey = null) {
+  const query = apiKey ? `?api_key=${encodeURIComponent(apiKey)}` : '';
+  return request(`/settings/models${query}`);
 }
 
 // ── Gene CLI Actions ──

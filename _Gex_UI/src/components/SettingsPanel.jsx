@@ -1,10 +1,11 @@
 /**
  * SettingsPanel v1.0.0 -- Modal for AI provider config (no emojis)
+ * Single dropdown design: select Model + Provider in one click.
  */
 import { useState, useEffect } from 'react';
 import useGexStore from '../store/useGexStore';
 import { getSettings, updateSettings, listModels } from '../services/api';
-import { Settings, X } from 'lucide-react';
+import { Settings, X, RefreshCw } from 'lucide-react';
 
 export default function SettingsPanel() {
   const { showSettings, setShowSettings } = useGexStore();
@@ -16,18 +17,32 @@ export default function SettingsPanel() {
   });
   const [models, setModels] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (showSettings && !loaded) {
       getSettings()
-        .then(s => { setSettings(s); setLoaded(true); })
-        .catch(() => {});
-      listModels()
-        .then(m => setModels(m.models || []))
+        .then(s => { 
+          setSettings(state => ({ ...state, ...s })); 
+          setLoaded(true);
+          if (s.api_key) fetchModels(s.api_key);
+        })
         .catch(() => {});
     }
   }, [showSettings, loaded]);
+
+  const fetchModels = async (key) => {
+    setLoadingModels(true);
+    try {
+      const resp = await listModels(key);
+      setModels(resp.models || []);
+    } catch {
+      // Fallback handled by API
+    } finally {
+      setLoadingModels(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -37,6 +52,14 @@ export default function SettingsPanel() {
   };
 
   if (!showSettings) return null;
+
+  // Group models by provider for the optgroup dropdown
+  const groupedModels = {};
+  for (const m of models) {
+    if (!m.provider) continue;
+    if (!groupedModels[m.provider]) groupedModels[m.provider] = [];
+    groupedModels[m.provider].push(m);
+  }
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowSettings(false)}>
@@ -50,39 +73,54 @@ export default function SettingsPanel() {
 
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">AiAssist API Key</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <label className="form-label" style={{ margin: 0 }}>AiAssist API Key</label>
+              <button 
+                className="btn btn-sm btn-icon" 
+                title="Fetch Models"
+                onClick={() => fetchModels(settings.api_key)}
+                disabled={loadingModels || !settings.api_key}
+              >
+                <RefreshCw size={12} className={loadingModels ? 'spin' : ''} />
+                <span style={{ marginLeft: '4px' }}>Load Models</span>
+              </button>
+            </div>
             <input className="input" type="password" placeholder="aai_xxxxx..."
               value={settings.api_key}
               onChange={(e) => setSettings(s => ({ ...s, api_key: e.target.value }))} />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Provider</label>
-            <select className="input" value={settings.provider}
-              onChange={(e) => setSettings(s => ({ ...s, provider: e.target.value }))}>
-              <option value="groq">Groq</option>
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="gemini">Gemini</option>
-              <option value="mistral">Mistral</option>
+            <label className="form-label">Model (Provider implied)</label>
+            <select 
+              className="input" 
+              value={`${settings.provider}::${settings.model}`}
+              onChange={(e) => {
+                const [provider, model] = e.target.value.split('::');
+                setSettings(s => ({ ...s, provider, model }));
+              }}
+            >
+              {Object.keys(groupedModels).length > 0 ? (
+                Object.entries(groupedModels).map(([provider, provModels]) => (
+                  <optgroup key={provider} label={provider.toUpperCase()}>
+                    {provModels.map(m => (
+                      <option key={`${m.provider}::${m.id}`} value={`${m.provider}::${m.id}`}>
+                        {m.name || m.id}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              ) : (
+                // Fallback option when models haven't loaded yet
+                <option value={`${settings.provider}::${settings.model}`}>
+                  {settings.provider} — {settings.model}
+                </option>
+              )}
             </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Model</label>
-            <input className="input" placeholder="e.g. llama-3.3-70b-versatile"
-              value={settings.model}
-              onChange={(e) => setSettings(s => ({ ...s, model: e.target.value }))} />
-            {models.length > 0 && (
-              <div style={{ marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                {models.slice(0, 6).map(m => (
-                  <button key={m.id} className="btn btn-sm"
-                    onClick={() => setSettings(s => ({ ...s, model: m.id }))}
-                    style={{ fontSize: 'var(--font-size-xs)' }}>
-                    {m.name || m.id}
-                  </button>
-                ))}
-              </div>
+            {Object.keys(groupedModels).length === 0 && (
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
+                Enter your API key and click 'Load Models' to fetch the full list.
+              </span>
             )}
           </div>
 

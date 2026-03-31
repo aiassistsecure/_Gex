@@ -76,18 +76,18 @@ async def update_settings(req: SettingsUpdate):
 
 
 @router.get("/models")
-async def list_models():
+async def list_models(api_key: Optional[str] = None):
     """List available models by proxying to AiAssist API."""
     settings = load_settings()
-    api_key = settings.get("api_key")
+    key_to_use = api_key or settings.get("api_key")
     api_base = settings.get("api_base", "https://api.aiassist.net").rstrip("/")
 
-    if api_key:
+    if key_to_use:
         try:
             async with httpx.AsyncClient(timeout=7.0) as client:
                 res = await client.get(
                     f"{api_base}/v1/providers",
-                    headers={"Authorization": f"Bearer {api_key}"}
+                    headers={"Authorization": f"Bearer {key_to_use}"}
                 )
             if res.status_code == 200:
                 data = res.json()
