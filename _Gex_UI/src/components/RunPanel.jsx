@@ -181,18 +181,61 @@ export default function RunPanel() {
     <div className="right-panel" style={{ width: '100%', minWidth: '100%' }}>
       {/* Header */}
       <div className="panel-section">
-        <div className="panel-section-header">
-          <span className="panel-label">Agentic IDE (v2.2)</span>
+        <div className="panel-section-header" style={{ alignItems: 'center' }}>
+
+          {/* Jenny Avatar — cycles states */}
+          <div style={{ position: 'relative', width: '34px', height: '34px', flexShrink: 0 }}>
+            {/* Spinning conic ring — always visible, intensity varies by state */}
+            <div style={{
+              position: 'absolute', inset: '-3px', borderRadius: '50%',
+              background: runState === 'completed'
+                ? 'conic-gradient(from 0deg, #6fbe44, #fca311, #6fbe44)'
+                : 'conic-gradient(from 0deg, #e85d04, #f48c06, #dc2f02, #e85d04)',
+              opacity: runState === 'running' ? 1 : 0.45,
+              animation: runState === 'running' ? 'jenny-spin 1.5s linear infinite' : 'jenny-spin 6s linear infinite',
+            }} />
+            <img
+              src={
+                runState === 'completed' ? '/jenny-done.png'
+                : runState === 'running'  ? '/jenny-working.png'
+                : '/jenny-idle.png'
+              }
+              alt="Jenny"
+              style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                objectFit: 'cover', position: 'relative', zIndex: 1,
+                border: '2px solid var(--surface-1)',
+                boxShadow: runState === 'running'
+                  ? '0 0 14px 4px rgba(232,93,4,0.7)'
+                  : runState === 'completed'
+                    ? '0 0 14px 4px rgba(111,190,68,0.6)'
+                    : '0 0 8px 2px rgba(232,93,4,0.35)',
+                animation: runState === 'running'
+                  ? 'jenny-pulse 1.2s ease-in-out infinite'
+                  : runState === 'completed'
+                    ? 'jenny-bounce 0.6s ease forwards'
+                    : 'jenny-idle-breathe 3s ease-in-out infinite',
+                transition: 'box-shadow 0.4s ease',
+              }}
+            />
+          </div>
+
+
+          <div style={{ flex: 1, marginLeft: '8px' }}>
+            <div style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.5px' }}>Jenny</div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: '1px' }}>by AiAssist SECURE</div>
+          </div>
+
           <span className={`run-indicator ${runState}`}>
-            {runState === 'idle' && 'IDLE'}
-            {runState === 'running' && 'THINKING'}
+            {runState === 'idle'      && 'IDLE'}
+            {runState === 'running'   && 'WORKING'}
             {runState === 'completed' && 'DONE'}
-            {runState === 'failed' && 'FAILED'}
+            {runState === 'failed'    && 'FAILED'}
           </span>
         </div>
 
         {runState === 'running' && (
-          <div className="progress-track" style={{ marginTop: '4px' }}>
+          <div className="progress-track" style={{ marginTop: '6px' }}>
             <div className="progress-fill indeterminate" style={{ width: '100%' }} />
           </div>
         )}

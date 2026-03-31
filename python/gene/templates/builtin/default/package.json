@@ -31,7 +31,12 @@
         "filter": ["**/*"]
       }
     ],
-    "win": { "target": "nsis" },
+    "win": {
+      "target": [
+        { "target": "nsis",     "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
     "mac": { "target": "dmg" },
     "linux": { "target": "AppImage" }
   }

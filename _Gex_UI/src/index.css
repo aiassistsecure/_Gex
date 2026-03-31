@@ -1,51 +1,58 @@
 /**
- * _Gex OS v1.0.0 — VS Code × Bloomberg Terminal
- * Design System: Dense dark panels, monospace first, neon accents on void black
+ * Jenny by AiAssist SECURE — VS Code × Industrial Warmth
+ * Design System: Smoky charcoal, burnt orange fire, ember glow on void black
  */
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
 :root {
-  /* Surface */
-  --void:          #08090d;
-  --surface-0:     #0c0e14;
-  --surface-1:     #10131b;
-  --surface-2:     #151923;
-  --surface-3:     #1a1f2e;
-  --surface-hover: #1e2438;
+  /* Surface — warm charcoal, zero blue tint */
+  --void:          #090909;
+  --surface-0:     #0f0f11;
+  --surface-1:     #141416;
+  --surface-2:     #1c1c1f;
+  --surface-3:     #222226;
+  --surface-hover: #27272b;
 
-  /* Borders */
-  --border-subtle:  #1a1f2e;
-  --border-default: #232a3d;
-  --border-active:  #2d3652;
+  /* Borders — warm dark grey */
+  --border-subtle:  #1e1e22;
+  --border-default: #2a2a2f;
+  --border-active:  #3a3a42;
 
   /* Text */
-  --text-primary:   #e8ecf4;
-  --text-secondary: #8891a8;
-  --text-muted:     #555e75;
-  --text-dim:       #3a4260;
+  --text-primary:   #f0ece8;
+  --text-secondary: #9a9490;
+  --text-muted:     #5c5855;
+  --text-dim:       #3a3835;
 
-  /* Bloomberg Accents */
-  --accent-orange:  #ff8c42;
-  --accent-cyan:    #00d4ff;
-  --accent-green:   #00e68a;
-  --accent-red:     #ff4c6a;
-  --accent-yellow:  #ffd43b;
-  --accent-purple:  #a78bfa;
-  --accent-blue:    #4da6ff;
-  --accent-copper:  #d4a574;
+  /* Jenny Fire Palette */
+  --accent-orange:  #e85d04;   /* Home Depot burnt orange */
+  --accent-amber:   #f48c06;   /* warm amber — replaces cyan */
+  --accent-ember:   #ff6b35;   /* bright ember */
+  --accent-fire:    #dc2f02;   /* red-orange fire */
+  --accent-green:   #6fbe44;   /* warm sage green */
+  --accent-red:     #e63946;   /* error red */
+  --accent-yellow:  #fca311;   /* amber yellow */
+  --accent-purple:  #c77dff;   /* soft violet accent */
+  --accent-blue:    #4da6ff;   /* kept for diff blue */
+  --accent-copper:  #d4956a;   /* warm copper */
+
+  /* Legacy alias — keeps old references working */
+  --accent-cyan:    #f48c06;   /* remapped to amber */
 
   /* Semantic */
-  --success: #00e68a;
-  --warning: #ffd43b;
-  --error:   #ff4c6a;
-  --info:    #00d4ff;
+  --success: #6fbe44;
+  --warning: #fca311;
+  --error:   #e63946;
+  --info:    #f48c06;
 
-  /* Bloomberg Special */
-  --bb-orange:     #ff6600;
-  --bb-header:     #1a1410;
-  --bb-highlight:  rgba(255, 140, 66, 0.08);
+  /* Jenny Special */
+  --jenny-glow:    rgba(232, 93, 4, 0.10);
+  --jenny-header:  #0c0a08;
+  --bb-highlight:  rgba(232, 93, 4, 0.08);  /* legacy alias */
+  --bb-orange:     #e85d04;
+  --bb-header:     #0c0a08;
 
   /* Layout */
   --activity-bar-width: 48px;
@@ -54,7 +61,7 @@
   --titlebar-height: 38px;
   --panel-gap: 1px;
 
-  /* Typography */
+  /* Typography — Inter first, mono for code */
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
   --font-size-xs:  0.65rem;
@@ -82,7 +89,7 @@ html, body, #root {
 }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--font-size-md);
   color: var(--text-primary);
   background: var(--void);
@@ -570,8 +577,8 @@ body {
   background: var(--surface-2);
 }
 .run-indicator.running {
-  color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.08);
+  color: var(--accent-ember);
+  background: rgba(232, 93, 4, 0.10);
   animation: pulse-bg 1.5s ease-in-out infinite;
 }
 .run-indicator.completed {
@@ -623,13 +630,13 @@ body {
 }
 
 .btn-cyan {
-  background: rgba(0, 212, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.25);
-  color: var(--accent-cyan);
+  background: rgba(244, 140, 6, 0.08);
+  border-color: rgba(244, 140, 6, 0.25);
+  color: var(--accent-amber);
 }
 .btn-cyan:hover:not(:disabled) {
-  background: rgba(0, 212, 255, 0.15);
-  border-color: var(--accent-cyan);
+  background: rgba(244, 140, 6, 0.15);
+  border-color: var(--accent-amber);
 }
 
 .btn-green {
@@ -700,7 +707,7 @@ textarea.input {
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan));
+  background: linear-gradient(90deg, var(--accent-orange), var(--accent-amber));
   border-radius: 1px;
   transition: width 0.3s ease;
 }
@@ -738,7 +745,7 @@ textarea.input {
 }
 .log-line.success .log-msg { color: var(--accent-green); }
 .log-line.error .log-msg { color: var(--accent-red); }
-.log-line.info .log-msg { color: var(--accent-cyan); }
+.log-line.info .log-msg { color: var(--accent-amber); }
 .log-line.dim .log-msg { color: var(--text-dim); }
 
 /* ─── Status Bar (Bottom) ───────────────────────────────────── */
@@ -1028,6 +1035,29 @@ textarea.input {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ─── Jenny Avatar Animations ───────────────────────────────── */
+@keyframes jenny-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes jenny-pulse {
+  0%, 45%  { filter: brightness(1)   drop-shadow(0 0 4px rgba(232,93,4,0.5));  transform: scale(1);    }
+  50%, 95% { filter: brightness(1.15) drop-shadow(0 0 10px rgba(244,140,6,0.9)); transform: scale(1.04); }
+  100%     { filter: brightness(1)   drop-shadow(0 0 4px rgba(232,93,4,0.5));  transform: scale(1);    }
+}
+@keyframes jenny-bounce {
+  0%   { transform: scale(1);    }
+  30%  { transform: scale(1.18); }
+  60%  { transform: scale(0.94); }
+  80%  { transform: scale(1.07); }
+  100% { transform: scale(1);    }
+}
+@keyframes jenny-idle-breathe {
+  0%, 100% { filter: brightness(0.95) drop-shadow(0 0 2px rgba(232,93,4,0.2)); }
+  50%      { filter: brightness(1.05) drop-shadow(0 0 6px rgba(232,93,4,0.45)); }
+}
+
 
 /* ─── Utility ───────────────────────────────────────────────── */
 .mono { font-family: var(--font-mono); }
