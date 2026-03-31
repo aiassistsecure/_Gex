@@ -1,0 +1,8 @@
+Gex UI (Interchained LLC)
+
+This repository provides the user interface layer for the Gex system.
+
+The core execution engine (_Gex) is licensed separately.
+
+This UI is intended to promote transparency, extensibility, and developer adoption
+while protecting the integrity of the underlying system.
