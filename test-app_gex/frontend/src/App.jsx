@@ -15,10 +15,10 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/info`)
-      .then(async (response) => {
+    fetch(API_URL)
+      .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load app info: ${response.status}`);
+          throw new Error('Failed to load app info');
         }
         return response.json();
       })
@@ -39,195 +39,79 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
-    const connect = () => {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (!isMounted) return;
-        setStatus('connected');
-        setWsMessages((prev) => [
-          ...prev,
-          { type: 'system', text: 'WebSocket connected' },
-        ]);
-      };
-
-      ws.onmessage = (event) => {
-        if (!isMounted) return;
-
-        try {
-          const data = JSON.parse(event.data);
-          setWsMessages((prev) => [
-            ...prev,
-            { type: 'incoming', text: JSON.stringify(data, null, 2) },
-          ]);
-        } catch {
-          setWsMessages((prev) => [
-            ...prev,
-            { type: 'incoming', text: event.data },
-          ]);
-        }
-      };
-
-      ws.onclose = () => {
-        if (!isMounted) return;
-        setStatus('disconnected');
-        setWsMessages((prev) => [
-          ...prev,
-          { type: 'system', text: 'WebSocket disconnected' },
-        ]);
-      };
-
-      ws.onerror = () => {
-        if (!isMounted) return;
-        setStatus('error');
-      };
+    ws.onopen = () => {
+      setStatus('connected');
     };
 
-    connect();
+    ws.onmessage = (event) => {
+      setWsMessages((prev) => [...prev, event.data]);
+    };
+
+    ws.onerror = () => {
+      setStatus('error');
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected');
+    };
 
     return () => {
-      isMounted = false;
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      ws.close();
+      wsRef.current = null;
     };
   }, []);
 
-  const sendMessage = () => {
-    const trimmed = input.trim();
+  const handleSend = () => {
+    const message = input.trim();
 
-    if (!trimmed || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (!message || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return;
     }
 
-    const msg = { type: 'user:message', payload: { text: trimmed } };
-    wsRef.current.send(JSON.stringify(msg));
-    setWsMessages((prev) => [
-      ...prev,
-      { type: 'outgoing', text: JSON.stringify(msg, null, 2) },
-    ]);
+    wsRef.current.send(message);
+    setWsMessages((prev) => [...prev, `You: ${message}`]);
     setInput('');
   };
 
-  const statusColor = {
-    connected: 'bg-emerald-500',
-    connecting: 'bg-amber-500 animate-pulse',
-    disconnected: 'bg-zinc-500',
-    error: 'bg-red-500',
-  }[status] || 'bg-zinc-500';
-
-  const navItems = ['Dashboard', 'Projects', 'Agents', 'Settings'];
-
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="glass border-b border-white/5 px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setMobileNavOpen((prev) => !prev)}
-            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
-            style={{ WebkitAppRegion: 'no-drag' }}
-            aria-label="Toggle navigation"
-          >
-            ☰
-          </button>
-
-          <div>
-            <h1 className="text-lg font-semibold">AI Assist Debug Console</h1>
-            <p className="text-sm text-zinc-400">
-              {appInfo?.name || 'Frontend status monitor'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className={`inline-block w-3 h-3 rounded-full ${statusColor}`} />
-          <span className="text-sm capitalize text-zinc-300">{status}</span>
-        </div>
+    <main style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
+      <header style={{ marginBottom: '1rem' }}>
+        <h1>App Debug View</h1>
+        <p>Status: {status}</p>
+        <button type="button" onClick={() => setMobileNavOpen((prev) => !prev)}>
+          {mobileNavOpen ? 'Close Menu' : 'Open Menu'}
+        </button>
       </header>
 
-      <div className="flex min-h-[calc(100vh-73px)]">
-        <aside
-          className={`${mobileNavOpen ? 'block' : 'hidden'} md:block w-64 border-r border-white/5 bg-white/[0.02] p-4`}
-        >
-          <nav className="space-y-2">
-            {navItems.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="w-full rounded-lg px-3 py-2 text-left text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                {item}
-              </button>
-            ))}
-          </nav>
+      <section style={{ marginBottom: '1rem' }}>
+        <h2>API Info</h2>
+        <pre>{appInfo ? JSON.stringify(appInfo, null, 2) : 'Loading...'}</pre>
+      </section>
 
-          {appInfo && (
-            <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-3">
-              <h2 className="text-sm font-medium text-white">App Info</h2>
-              <pre className="mt-2 overflow-auto text-xs text-zinc-300">
-                {JSON.stringify(appInfo, null, 2)}
-              </pre>
-            </div>
-          )}
-        </aside>
+      <section style={{ marginBottom: '1rem' }}>
+        <h2>WebSocket Messages</h2>
+        <ul>
+          {wsMessages.map((message, index) => (
+            <li key={`${index}-${message}`}>{message}</li>
+          ))}
+        </ul>
+      </section>
 
-        <main className="flex-1 p-4 sm:p-6">
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] shadow-sm">
-            <div className="border-b border-white/10 px-4 py-3">
-              <h2 className="font-medium">WebSocket Messages</h2>
-            </div>
-
-            <div className="h-[420px] overflow-auto p-4 space-y-3">
-              {wsMessages.length === 0 ? (
-                <p className="text-sm text-zinc-400">No messages yet.</p>
-              ) : (
-                wsMessages.map((message, index) => (
-                  <div
-                    key={`${message.type}-${index}`}
-                    className="rounded-lg border border-white/10 bg-black/20 p-3"
-                  >
-                    <div className="mb-1 text-xs uppercase tracking-wide text-zinc-500">
-                      {message.type}
-                    </div>
-                    <pre className="whitespace-pre-wrap break-words text-sm text-zinc-200">
-                      {message.text}
-                    </pre>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="border-t border-white/10 p-4">
-              <div className="flex gap-3">
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      sendMessage();
-                    }
-                  }}
-                  placeholder="Send a WebSocket message..."
-                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-white/20"
-                />
-                <button
-                  type="button"
-                  onClick={sendMessage}
-                  disabled={!input.trim() || wsRef.current?.readyState !== WebSocket.OPEN}
-                  className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
+      <section>
+        <h2>Send Message</h2>
+        <input
+          type="text"
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="Type a message"
+        />
+        <button type="button" onClick={handleSend}>
+          Send
+        </button>
+      </section>
+    </main>
   );
 }
