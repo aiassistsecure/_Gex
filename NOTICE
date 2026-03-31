@@ -1,0 +1,55 @@
+_Gex — AI Code Surgery Engine
+
+Copyright (c) 2026 Interchained LLC
+
+This software is licensed under the Business Source License 1.1 (BUSL).
+See the LICENSE file in this repository for full terms.
+
+---
+
+Overview
+
+_Gex is a structured, deterministic AI code execution engine designed
+for safe, reviewable, and controlled code modification.
+
+It enables:
+- Surgical code transformations using structured patch formats
+- File-by-file execution with streaming results
+- Human-in-the-loop approval workflows
+- Safe execution via isolated working copies
+
+---
+
+License Summary (Non-Binding)
+
+- Source code is visible and may be used for personal or internal purposes
+- Commercial use, SaaS, or competing products are restricted
+- A commercial license is required for production or hosted deployments
+
+For full legal terms, refer to the LICENSE file.
+
+---
+
+Commercial Licensing
+
+For commercial use, SaaS deployment, or enterprise licensing:
+
+Contact:
+dev@interchained.org
+
+---
+
+Trademark Notice
+
+The names "_Gex", "AiAssist Secure", and "Interchained"
+are trademarks of Interchained LLC.
+
+Use of these names in derivative works, competing products,
+or commercial offerings is not permitted without prior written consent.
+
+---
+
+Disclaimer
+
+This NOTICE file is provided for informational purposes only and does not
+modify or replace the terms of the LICENSE.
