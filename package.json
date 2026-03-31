@@ -1,0 +1,30 @@
+{
+  "name": "gene-python-desktop-generator",
+  "version": "1.0.0",
+  "description": "Gene — The Electron for Python Developers. Build desktop apps with Python + Electron + Agents.",
+  "private": true,
+  "workspaces": [
+    "cli",
+    "core"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "node scripts/build-python.js && node scripts/build-electron.js",
+    "package": "node scripts/build-electron.js --package",
+    "clean": "rimraf dist build",
+    "cli": "node cli/bin/gene.js"
+  },
+  "keywords": [
+    "electron",
+    "python",
+    "desktop",
+    "framework",
+    "agent",
+    "generator"
+  ],
+  "author": "Gene Contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "rimraf": "^5.0.5"
+  }
+}

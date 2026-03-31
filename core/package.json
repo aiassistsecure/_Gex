@@ -1,0 +1,46 @@
+{
+  "name": "@gene/core",
+  "version": "1.0.0",
+  "description": "Gene core — Electron shell + Node orchestrator for Python desktop apps",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env GENE_DEV=true electron ."
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^28.1.3",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.gene.desktop",
+    "productName": "Gene",
+    "asar": true,
+    "asarUnpack": "resources/python/**",
+    "extraResources": [
+      {
+        "from": "../python/dist/",
+        "to": "python",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png",
+      "category": "Development"
+    }
+  }
+}

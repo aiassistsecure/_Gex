@@ -1,0 +1,8 @@
+{
+    "id": "default",
+    "name": "Gene Default (React + Tailwind + FastAPI)",
+    "description": "Full-stack desktop app with React + Tailwind frontend and FastAPI Python backend",
+    "version": "1.0.0",
+    "stack": ["react", "tailwind", "fastapi", "electron"],
+    "category": "full-stack"
+}

@@ -1,0 +1,123 @@
+# Gene CI/CD — Cross-Platform Build Pipeline
+# Builds Gene apps on Windows, macOS, and Linux via matrix strategy.
+
+name: Build & Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            python: '3.11'
+            artifact: '*.exe'
+          - os: macos-latest
+            platform: mac
+            python: '3.11'
+            artifact: '*.dmg'
+          - os: ubuntu-latest
+            platform: linux
+            python: '3.11'
+            artifact: '*.AppImage'
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.platform }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
+
+      # ─── Install Dependencies ──────────────────────────────────
+      - name: Install Node dependencies
+        run: |
+          npm install
+          cd frontend && npm install
+
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      # ─── Build Python Backend ──────────────────────────────────
+      - name: Bundle Python with PyInstaller
+        run: |
+          cd backend
+          pyinstaller --onedir --name gene-runtime \
+            --exclude-module tkinter \
+            --exclude-module matplotlib \
+            --exclude-module test \
+            --hidden-import uvicorn.logging \
+            --hidden-import uvicorn.loops.auto \
+            --hidden-import uvicorn.protocols.http.auto \
+            --hidden-import uvicorn.protocols.websockets.auto \
+            --hidden-import uvicorn.lifespan.on \
+            app.py
+        shell: bash
+
+      # ─── Build Frontend ────────────────────────────────────────
+      - name: Build React frontend
+        run: cd frontend && npx vite build
+
+      # ─── Package with Electron Builder ─────────────────────────
+      - name: Package Electron app
+        run: npx electron-builder --${{ matrix.platform }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS signing (optional)
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+
+      # ─── Upload Artifacts ──────────────────────────────────────
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gene-${{ matrix.platform }}
+          path: |
+            dist/${{ matrix.artifact }}
+            dist/*.zip
+          retention-days: 30
+
+  # ─── Release ─────────────────────────────────────────────────────
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
