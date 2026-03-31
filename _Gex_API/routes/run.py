@@ -139,12 +139,21 @@ async def ws_run_stream(websocket: WebSocket, run_id: str):
         elif state and state.state == "running":
             # Poll for updates
             last_processed = 0
+            last_tool_step = None
             while True:
                 current_state = runner.get_run_state(run_id)
                 if current_state is None:
                     break
 
-                # Send any new results
+                # Stream tool call progress whenever current_file changes
+                if current_state.current_file and current_state.current_file != last_tool_step:
+                    last_tool_step = current_state.current_file
+                    await websocket.send_json({
+                        "type": "tool_step",
+                        "message": current_state.current_file,
+                    })
+
+                # Send any new file results
                 for i in range(last_processed, len(current_state.results)):
                     result = current_state.results[i]
                     await websocket.send_json({
@@ -165,7 +174,8 @@ async def ws_run_stream(websocket: WebSocket, run_id: str):
                     })
                     break
 
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.3)
+
 
     except WebSocketDisconnect:
         pass
