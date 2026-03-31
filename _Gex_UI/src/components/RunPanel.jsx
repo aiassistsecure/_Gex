@@ -66,7 +66,7 @@ export default function RunPanel() {
   };
 
   return (
-    <div className="right-panel">
+    <div className="right-panel" style={{ width: '100%', minWidth: '100%' }}>
       {/* Header */}
       <div className="panel-section">
         <div className="panel-section-header">

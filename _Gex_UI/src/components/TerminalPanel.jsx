@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import useGexStore from '../store/useGexStore';
 import { TerminalSquare, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function TerminalPanel() {
+export default function TerminalPanel({ height = 220, onResizeStart }) {
   const { logs, clearLogs } = useGexStore();
   const [collapsed, setCollapsed] = useState(false);
   const logEndRef = useRef(null);
@@ -18,12 +18,25 @@ export default function TerminalPanel() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      borderTop: '1px solid var(--border-subtle)',
       background: 'var(--surface-0)',
-      height: collapsed ? '34px' : '220px',
-      transition: 'height 0.2s ease',
-      zIndex: 10
+      height: collapsed ? '34px' : `${height}px`,
+      minHeight: collapsed ? '34px' : '100px',
+      transition: collapsed ? 'height 0.2s ease' : 'none',
+      zIndex: 10,
+      position: 'relative'
     }}>
+      {/* Dynamic Resize Handle (Top) */}
+      {!collapsed && onResizeStart && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: '-2px', left: 0, right: 0, height: '4px',
+            cursor: 'row-resize',
+            zIndex: 20
+          }}
+          onMouseDown={onResizeStart}
+        />
+      )}
       {/* Header */}
       <div 
         style={{
