@@ -18,7 +18,7 @@ export async function build(options) {
 
   if (!fs.existsSync(path.join(cwd, 'jenny.config.json'))) {
     console.error(chalk.red('Not a Jenny project directory'));
-    return;
+    process.exit(1);
   }
 
   // ─── Build Python Backend ──────────────────────────────────────
@@ -32,12 +32,34 @@ export async function build(options) {
     }
 
     try {
-      // Ensure PyInstaller is available
+      // Resolve Python + PyInstaller from backend venv (preferred) or global
+      const venvScripts = path.join(backendDir, '.venv', 'Scripts');
+      const venvBin     = path.join(backendDir, '.venv', 'bin');
+      let pythonExe     = 'python';
+      let pyinstallerExe = 'pyinstaller';
+
+      if (fs.existsSync(path.join(venvScripts, 'python.exe'))) {
+        pythonExe      = path.join(venvScripts, 'python.exe');
+        pyinstallerExe = path.join(venvScripts, 'pyinstaller.exe');
+      } else if (fs.existsSync(path.join(venvBin, 'python'))) {
+        pythonExe      = path.join(venvBin, 'python');
+        pyinstallerExe = path.join(venvBin, 'pyinstaller');
+      }
+
+      // Ensure PyInstaller is available in the resolved env
       try {
-        execSync('pip show pyinstaller', { stdio: 'pipe' });
+        execSync(`"${pyinstallerExe}" --version`, { stdio: 'pipe' });
       } catch {
-        spinner.text = 'Installing PyInstaller...';
-        execSync('pip install pyinstaller', { stdio: 'pipe' });
+        spinner.text = 'Installing PyInstaller into venv...';
+        execSync(`"${pythonExe}" -m pip install pyinstaller`, { stdio: 'pipe' });
+        // Re-resolve after install
+        if (fs.existsSync(path.join(venvScripts, 'pyinstaller.exe'))) {
+          pyinstallerExe = path.join(venvScripts, 'pyinstaller.exe');
+        } else if (fs.existsSync(path.join(venvBin, 'pyinstaller'))) {
+          pyinstallerExe = path.join(venvBin, 'pyinstaller');
+        } else {
+          pyinstallerExe = `"${pythonExe}" -m PyInstaller`;
+        }
       }
 
       // Clean old dist to prevent stale exe from previous builds
@@ -48,7 +70,7 @@ export async function build(options) {
 
       // PyInstaller spec for Jenny apps
       const pyinstallerArgs = [
-        'pyinstaller',
+        pyinstallerExe,
         '--onedir',
         '--name', 'jenny',
         '--distpath', path.join(cwd, 'backend', 'dist'),
@@ -99,10 +121,9 @@ export async function build(options) {
         spinner.warn('PyInstaller ran but jenny.exe not found — check backend/dist/');
       }
     } catch (err) {
-      spinner.fail(`PyInstaller build failed: ${err.message}`);
-      console.log(chalk.gray('\n  Make sure PyInstaller is installed: pip install pyinstaller'));
-      console.log(chalk.gray('  Try running manually: cd backend && pyinstaller --onedir app.py'));
-      return;
+      spinner.fail(`PyInstaller build failed: ${err.message.split('\n')[0]}`);
+      console.log(chalk.gray('\n  Tip: activate your venv or install PyInstaller: pip install pyinstaller'));
+      process.exit(1);
     }
   }
 
@@ -113,7 +134,7 @@ export async function build(options) {
 
     if (!fs.existsSync(frontendDir)) {
       spinner.fail('No frontend/ directory found');
-      return;
+      process.exit(1);
     }
 
     try {
@@ -136,8 +157,8 @@ export async function build(options) {
         spinner.succeed('Frontend built → frontend/dist/');
       }
     } catch (err) {
-      spinner.fail(`Frontend build failed: ${err.message}`);
-      return;
+      spinner.fail(`Frontend build failed: ${err.message.split('\n')[0]}`);
+      process.exit(1);
     }
   }
 
