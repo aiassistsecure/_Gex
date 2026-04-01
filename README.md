@@ -73,13 +73,3 @@ Jenny is licensed under the **Business Source License 1.1**.
 For commercial inquiries: [dev@interchained.org](mailto:dev@interchained.org)
 
 ---
-
-## 🎓 Sensi Lessons: Code Signing
-
-Ready to ship to end-users? Don't let Windows SmartScreen block your masterpiece. Learn how to sign your binaries properly without leaking your secrets.
-
-👉 [**The Sensi's Guide to Code Signing**](docs/code-signing.md)
-
----
-
-<p align="center">Made with 🧬 by <a href="https://interchained.org">Interchained LLC</a></p>
