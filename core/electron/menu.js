@@ -1,5 +1,5 @@
 /**
- * Gene — Native Menu Template
+ * Jenny — Native Menu Template
  */
 
 module.exports = function createMenuTemplate(isDev, orchestrator) {
@@ -7,7 +7,7 @@ module.exports = function createMenuTemplate(isDev, orchestrator) {
 
   const template = [
     ...(isMac ? [{
-      label: 'Gene',
+      label: 'Jenny',
       submenu: [
         { role: 'about' },
         { type: 'separator' },
@@ -101,9 +101,9 @@ module.exports = function createMenuTemplate(isDev, orchestrator) {
       label: 'Help',
       submenu: [
         {
-          label: 'Gene Documentation',
+          label: 'Jenny Documentation',
           click: () => {
-            require('electron').shell.openExternal('https://github.com/gene-framework/gene');
+            require('electron').shell.openExternal('https://github.com/jenny-framework/jenny');
           },
         },
         {

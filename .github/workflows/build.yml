@@ -1,5 +1,5 @@
-# Gene CI/CD — Cross-Platform Build Pipeline
-# Builds Gene apps on Windows, macOS, and Linux via matrix strategy.
+# Jenny CI/CD — Cross-Platform Build Pipeline
+# Builds Jenny apps on Windows, macOS, and Linux via matrix strategy.
 
 name: Build & Release
 
@@ -64,7 +64,7 @@ jobs:
       - name: Bundle Python with PyInstaller
         run: |
           cd backend
-          pyinstaller --onedir --name gene-runtime \
+          pyinstaller --onedir --name jenny-runtime \
             --exclude-module tkinter \
             --exclude-module matplotlib \
             --exclude-module test \
@@ -95,7 +95,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: gene-${{ matrix.platform }}
+          name: jenny-${{ matrix.platform }}
           path: |
             dist/${{ matrix.artifact }}
             dist/*.zip

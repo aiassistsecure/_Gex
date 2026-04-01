@@ -1,8 +1,8 @@
 """
-_Gex OS — FastAPI Backend (Gene Edition)
-AI-native code surgery environment, vendored as Gene's development IDE.
+_Gex OS — FastAPI Backend (Jenny Edition)
+AI-native code surgery environment, vendored as Jenny's development IDE.
 
-When launched by `gene dev`, receives GENE_WORKSPACE env var pointing
+When launched by `jenny dev`, receives JENNY_WORKSPACE env var pointing
 to the user's project directory, and auto-loads it on startup.
 """
 import os
@@ -23,7 +23,7 @@ from routes import repo, run, settings, checkpoints, branding
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load settings on startup, auto-load Gene workspace if present."""
+    """Load settings on startup, auto-load Jenny workspace if present."""
     settings_file = Path(__file__).parent / "gex_settings.json"
     if settings_file.exists():
         saved = json.loads(settings_file.read_text())
@@ -38,14 +38,14 @@ async def lifespan(app: FastAPI):
 
     run.reconfigure_runner(config)
 
-    # Store Gene workspace path if provided
-    workspace = os.getenv("GENE_WORKSPACE", "")
+    # Store Jenny workspace path if provided
+    workspace = os.getenv("JENNY_WORKSPACE", "")
     if workspace:
         app.state.gene_workspace = workspace
     else:
         app.state.gene_workspace = ""
 
-    print(f"\n  [*] _Gex OS Backend (Gene IDE)")
+    print(f"\n  [*] _Gex OS Backend (Jenny IDE)")
     print(f"  Model: {config.provider}/{config.model}")
     print(f"  API Key: {'[OK] Set' if config.api_key else '[--] Not set -- configure in UI'}")
     if workspace:
@@ -55,8 +55,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="_Gex OS (Gene Edition)",
-    description="AI-native code surgery IDE for Gene apps",
+    title="_Gex OS (Jenny Edition)",
+    description="AI-native code surgery IDE for Jenny apps",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -76,12 +76,12 @@ app.include_router(checkpoints.router)
 app.include_router(branding.router)
 
 
-# ── Gene-specific routes ──
+# ── Jenny-specific routes ──
 
 @app.get("/")
 async def root():
     return {
-        "name": "_Gex OS (Gene IDE)",
+        "name": "_Gex OS (Jenny IDE)",
         "version": "1.0.0",
         "status": "running",
         "workspace": app.state.gene_workspace or None,
@@ -91,7 +91,7 @@ async def root():
 
 @app.get("/api/workspace")
 async def get_workspace():
-    """Return the auto-loaded workspace path (set by gene dev)."""
+    """Return the auto-loaded workspace path (set by jenny dev)."""
     workspace = app.state.gene_workspace
     return {
         "workspace": workspace if workspace else None,
@@ -104,9 +104,9 @@ class GeneCLIRequest(BaseModel):
     cwd: Optional[str] = None
 
 
-@app.post("/api/gene/cli")
+@app.post("/api/jenny/cli")
 async def run_gene_cli(req: GeneCLIRequest):
-    """Run a Gene CLI command from the UI."""
+    """Run a Jenny CLI command from the UI."""
     workspace = req.cwd or app.state.gene_workspace
     if not workspace:
         raise HTTPException(status_code=400, detail="No workspace set")
@@ -132,13 +132,13 @@ async def run_gene_cli(req: GeneCLIRequest):
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=504, detail="Command timed out")
     except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="Gene CLI not found")
+        raise HTTPException(status_code=500, detail="Jenny CLI not found")
 
 
 def _find_gene_cli() -> str:
-    """Locate the Gene CLI script relative to this file."""
+    """Locate the Jenny CLI script relative to this file."""
     gene_root = Path(__file__).parent.parent
-    cli_path = gene_root / "cli" / "bin" / "gene.js"
+    cli_path = gene_root / "cli" / "bin" / "jenny.js"
     if cli_path.exists():
         return str(cli_path)
-    return "gene"  # Fall back to PATH
+    return "jenny"  # Fall back to PATH

@@ -230,8 +230,8 @@ export default function App() {
             disabled={loading}
             title="Browse local folder"
             onClick={async () => {
-              if (window.gene?.invoke) {
-                const result = await window.gene.invoke('app:open-directory-dialog', { title: 'Open Project Folder', buttonLabel: 'Open' });
+              if (window.jenny?.invoke) {
+                const result = await window.jenny.invoke('app:open-directory-dialog', { title: 'Open Project Folder', buttonLabel: 'Open' });
                 if (!result.canceled && result.filePaths?.[0]) {
                   const dir = result.filePaths[0];
                   setRepoPath(dir);

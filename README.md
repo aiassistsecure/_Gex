@@ -1,4 +1,4 @@
-# 🧬 Gene — The Python Desktop App Generator
+# 🧬 Jenny — The Python Desktop App Generator
 
 > **Electron, but Python-native and agent-powered.**
 
@@ -14,7 +14,7 @@ Build desktop applications using Python as the brain, Electron as the shell, and
 - **🤖 AI Agents** — Code generation and surgical patching via [AiAssist.net](https://aiassist.net)
 - **📦 Self-contained** — Ships with bundled Python runtime (PyInstaller)
 - **🔌 Plugin system** — Extend with custom Python tools
-- **🛠️ CLI** — `gene create`, `gene dev`, `gene build`, `gene package`
+- **🛠️ CLI** — `jenny create`, `jenny dev`, `jenny build`, `jenny package`
 - **🔄 Hot reload** — Dev mode with auto-restart for both frontend and backend
 - **🌍 Cross-platform** — Windows, macOS, Linux via GitHub Actions CI/CD
 
@@ -23,18 +23,18 @@ Build desktop applications using Python as the brain, Electron as the shell, and
 ## 🚀 Quick Start
 
 ```bash
-# Install Gene CLI
-npm install -g gene-python-desktop-generator
+# Install Jenny CLI
+npm install -g jenny-python-desktop-generator
 
 # Create a new app
-gene create my-app
+jenny create my-app
 
 # Start developing
 cd my-app
-gene dev
+jenny dev
 ```
 
-### What happens when you run `gene dev`:
+### What happens when you run `jenny dev`:
 
 1. 🐍 Python backend starts (FastAPI + hot reload)
 2. ⚛️ React dev server starts (Vite + HMR)  
@@ -44,7 +44,7 @@ gene dev
 
 ## 📁 Project Structure
 
-A Gene app has three layers:
+A Jenny app has three layers:
 
 ```
 my-app/
@@ -61,7 +61,7 @@ my-app/
 │   ├── app.py          # FastAPI application
 │   ├── routes.py       # Your API endpoints
 │   └── requirements.txt
-├── gene.config.json    # Gene configuration
+├── jenny.config.json    # Jenny configuration
 └── package.json        # Electron + build config
 ```
 
@@ -97,11 +97,11 @@ my-app/
 
 ## 🤖 AI Agents (Optional)
 
-Gene includes an agent system powered by [AiAssist.net](https://aiassist.net):
+Jenny includes an agent system powered by [AiAssist.net](https://aiassist.net):
 
 ```bash
 # Set your AiAssist API key
-export GENE_AIASSIST_API_KEY=aai_your_key_here
+export JENNY_AIASSIST_API_KEY=aai_your_key_here
 ```
 
 ### Available agents:
@@ -120,12 +120,12 @@ The AI is 100% optional — your app works perfectly without it.
 
 ```bash
 # Build for production
-gene build
+jenny build
 # → Bundles Python with PyInstaller
 # → Builds React with Vite
 
 # Package into installer
-gene package
+jenny package
 # → Creates .exe (Windows), .dmg (macOS), .AppImage (Linux)
 ```
 
@@ -139,7 +139,7 @@ Create a plugin in `plugins/my-plugin/`:
 
 ```python
 # plugins/my-plugin/main.py
-from gene.plugins.base import PluginBase
+from jenny.plugins.base import PluginBase
 
 class MyPlugin(PluginBase):
     async def execute(self, params):
@@ -160,7 +160,7 @@ class MyPlugin(PluginBase):
 
 ## ⚙️ Configuration
 
-`gene.config.json`:
+`jenny.config.json`:
 
 ```json
 {
@@ -186,11 +186,11 @@ Environment variables (override config):
 
 | Variable | Description |
 |----------|-------------|
-| `GENE_PORT` | Python API port |
-| `GENE_WS_PORT` | WebSocket port |
-| `GENE_AIASSIST_API_KEY` | AiAssist.net API key |
-| `GENE_AIASSIST_PROVIDER` | Default LLM provider |
-| `GENE_DEBUG` | Enable debug mode |
+| `JENNY_PORT` | Python API port |
+| `JENNY_WS_PORT` | WebSocket port |
+| `JENNY_AIASSIST_API_KEY` | AiAssist.net API key |
+| `JENNY_AIASSIST_PROVIDER` | Default LLM provider |
+| `JENNY_DEBUG` | Enable debug mode |
 
 ---
 
@@ -198,11 +198,11 @@ Environment variables (override config):
 
 | Command | Description |
 |---------|-------------|
-| `gene create <name>` | Scaffold new app |
-| `gene dev` | Start dev mode |
-| `gene build` | Build for production |
-| `gene package` | Package into installer |
-| `gene info` | Show environment info |
+| `jenny create <name>` | Scaffold new app |
+| `jenny dev` | Start dev mode |
+| `jenny build` | Build for production |
+| `jenny package` | Package into installer |
+| `jenny info` | Show environment info |
 
 ---
 
@@ -212,4 +212,4 @@ MIT
 
 ---
 
-Built with 🧬 by the Gene community • Powered by [AiAssist.net](https://aiassist.net)
+Built with 🧬 by the Jenny community • Powered by [AiAssist.net](https://aiassist.net)

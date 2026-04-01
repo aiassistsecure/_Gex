@@ -1,5 +1,5 @@
 /**
- * Gene Health Monitor
+ * Jenny Health Monitor
  * Polls the Python runtime /health endpoint.
  * Emits events: healthy, unhealthy, recovering (auto-restart trigger).
  */

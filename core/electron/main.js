@@ -1,6 +1,6 @@
 /**
- * Gene — Electron Main Process (Framework Core)
- * This is the core Electron entry point used by Gene apps.
+ * Jenny — Electron Main Process (Framework Core)
+ * This is the core Electron entry point used by Jenny apps.
  * Thin shell: window management, IPC, delegates to Orchestrator for Python.
  */
 
@@ -8,15 +8,15 @@ const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 const Orchestrator = require('../orchestrator');
 
-const isDev = process.env.GENE_DEV === 'true' || !app.isPackaged;
+const isDev = process.env.JENNY_DEV === 'true' || !app.isPackaged;
 
 // Load project config
 let projectConfig = {};
 try {
-  projectConfig = require(path.join(process.cwd(), 'gene.config.json'));
+  projectConfig = require(path.join(process.cwd(), 'jenny.config.json'));
 } catch {
   projectConfig = {
-    appName: 'Gene App',
+    appName: 'Jenny App',
     python: { port: 18764, wsPort: 18765 },
     electron: { width: 1280, height: 800, devPort: 3000 },
   };
@@ -75,7 +75,7 @@ function createWindow() {
     height,
     minWidth: 800,
     minHeight: 600,
-    title: projectConfig.appName || 'Gene App',
+    title: projectConfig.appName || 'Jenny App',
     backgroundColor: '#0f0f14',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

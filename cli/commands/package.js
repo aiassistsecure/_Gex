@@ -1,7 +1,7 @@
 /**
- * gene package
- * Packages the Gene app into a distributable installer using electron-builder.
- * Expects `gene build` to have been run first.
+ * jenny package
+ * Packages the Jenny app into a distributable installer using electron-builder.
+ * Expects `jenny build` to have been run first.
  */
 
 import chalk from 'chalk';
@@ -11,28 +11,28 @@ import path from 'path';
 import fs from 'fs';
 
 export async function packageApp(options) {
-  console.log(chalk.bold('\n🧬 Gene Packaging\n'));
+  console.log(chalk.bold('\n🧬 Jenny Packaging\n'));
 
   const cwd = process.cwd();
 
-  if (!fs.existsSync(path.join(cwd, 'gene.config.json'))) {
-    console.error(chalk.red('Not a Gene project directory'));
+  if (!fs.existsSync(path.join(cwd, 'jenny.config.json'))) {
+    console.error(chalk.red('Not a Jenny project directory'));
     return;
   }
 
   // Check that build artifacts exist
-  const backendDist = path.join(cwd, 'backend', 'dist', 'gene-runtime');
+  const backendDist = path.join(cwd, 'backend', 'dist', 'jenny-runtime');
   const frontendDist = path.join(cwd, 'frontend', 'dist');
 
   if (!options.skipBuild) {
     if (!fs.existsSync(backendDist)) {
-      console.log(chalk.yellow('  Backend not built — running gene build first...'));
+      console.log(chalk.yellow('  Backend not built — running jenny build first...'));
       const { build } = await import('./build.js');
       await build({});
     }
 
     if (!fs.existsSync(frontendDist)) {
-      console.log(chalk.yellow('  Frontend not built — running gene build first...'));
+      console.log(chalk.yellow('  Frontend not built — running jenny build first...'));
       const { build } = await import('./build.js');
       await build({ pythonOnly: false });
     }

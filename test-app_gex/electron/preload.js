@@ -5,7 +5,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('gene', {
+contextBridge.exposeInMainWorld('jenny', {
   // IPC invoke (request/response)
   invoke: (channel, ...args) => {
     const validChannels = ['app:get-config', 'app:restart-python'];
@@ -25,5 +25,5 @@ contextBridge.exposeInMainWorld('gene', {
 
   // Platform info
   platform: process.platform,
-  isDev: process.env.GENE_DEV === 'true',
+  isDev: process.env.JENNY_DEV === 'true',
 });

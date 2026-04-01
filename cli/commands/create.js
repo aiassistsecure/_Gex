@@ -1,6 +1,6 @@
 /**
- * gene create <name>
- * Scaffolds a new Gene desktop application.
+ * jenny create <name>
+ * Scaffolds a new Jenny desktop application.
  */
 
 import chalk from 'chalk';
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function create(name, options) {
-  console.log(chalk.bold(`\n🧬 Creating Gene app: ${chalk.cyan(name)}\n`));
+  console.log(chalk.bold(`\n🧬 Creating Jenny app: ${chalk.cyan(name)}\n`));
 
   // Resolve target directory
   const targetDir = path.resolve(options.dir || `./${name}`);
@@ -34,11 +34,11 @@ export async function create(name, options) {
 
   // Template selection
   const template = options.template || 'default';
-  const templateDir = path.resolve(__dirname, '..', '..', 'python', 'gene', 'templates', 'builtin', template);
+  const templateDir = path.resolve(__dirname, '..', '..', 'python', 'jenny', 'templates', 'builtin', template);
 
   if (!fs.existsSync(templateDir)) {
     console.error(chalk.red(`Template not found: ${template}`));
-    console.log(chalk.gray(`Available templates are in: python/gene/templates/builtin/`));
+    console.log(chalk.gray(`Available templates are in: python/jenny/templates/builtin/`));
     return;
   }
 
@@ -121,16 +121,16 @@ export async function create(name, options) {
       execSync('git init', { cwd: targetDir, stdio: 'pipe' });
       fs.writeFileSync(
         path.join(targetDir, '.gitignore'),
-        'node_modules/\n__pycache__/\n*.pyc\ndist/\nbuild/\n.gene/\n.venv/\nvenv/\n*.egg-info/\n.env\n',
+        'node_modules/\n__pycache__/\n*.pyc\ndist/\nbuild/\n.jenny/\n.venv/\nvenv/\n*.egg-info/\n.env\n',
       );
     } catch {}
   }
 
   // Done!
-  console.log(chalk.bold.green(`\n✅ Gene app "${name}" created successfully!\n`));
+  console.log(chalk.bold.green(`\n✅ Jenny app "${name}" created successfully!\n`));
   console.log(chalk.gray('  Get started:\n'));
   console.log(chalk.white(`    cd ${name}`));
-  console.log(chalk.white('    gene dev'));
+  console.log(chalk.white('    jenny dev'));
   console.log();
   console.log(chalk.gray('  Or manually:\n'));
   console.log(chalk.white('    # Terminal 1: Python backend'));
@@ -140,7 +140,7 @@ export async function create(name, options) {
   console.log(chalk.white('    cd frontend && npm run dev'));
   console.log();
   console.log(chalk.white('    # Terminal 3: Electron shell'));
-  console.log(chalk.white('    GENE_DEV=true npx electron .'));
+  console.log(chalk.white('    JENNY_DEV=true npx electron .'));
   console.log();
 }
 

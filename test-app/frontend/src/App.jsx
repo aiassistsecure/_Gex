@@ -163,7 +163,7 @@ const faqs = [
 
 function SectionLabel({ children }) {
   return (
-    <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-gene-200">
+    <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-jenny-200">
       {children}
     </div>
   );
@@ -190,7 +190,7 @@ export default function App() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b1020]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           <a href="#" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gene-500/20 text-lg font-bold text-gene-200 ring-1 ring-gene-400/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-jenny-500/20 text-lg font-bold text-jenny-200 ring-1 ring-jenny-400/30">
               A
             </div>
             <div>
@@ -220,7 +220,7 @@ export default function App() {
             </a>
             <a
               href="#final-cta"
-              className="rounded-full bg-gene-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(109,124,255,0.35)] transition hover:bg-gene-400"
+              className="rounded-full bg-jenny-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(109,124,255,0.35)] transition hover:bg-jenny-400"
             >
               Start free
             </a>
@@ -244,7 +244,7 @@ export default function App() {
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <a
                   href="#pricing"
-                  className="inline-flex items-center justify-center rounded-full bg-gene-500 px-6 py-3.5 text-base font-semibold text-white shadow-[0_12px_40px_rgba(109,124,255,0.35)] transition hover:bg-gene-400"
+                  className="inline-flex items-center justify-center rounded-full bg-jenny-500 px-6 py-3.5 text-base font-semibold text-white shadow-[0_12px_40px_rgba(109,124,255,0.35)] transition hover:bg-jenny-400"
                 >
                   Start free
                 </a>
@@ -277,7 +277,7 @@ export default function App() {
             </div>
 
             <div className="relative">
-              <div className="absolute -left-10 top-10 h-40 w-40 rounded-full bg-gene-500/20 blur-3xl" />
+              <div className="absolute -left-10 top-10 h-40 w-40 rounded-full bg-jenny-500/20 blur-3xl" />
               <div className="absolute -bottom-8 right-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
               <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -291,7 +291,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4 py-6">
-                  <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-gene-500 px-4 py-3 text-sm text-white">
+                  <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-jenny-500 px-4 py-3 text-sm text-white">
                     Can I cancel anytime if we start on a paid plan?
                   </div>
                   <div className="max-w-[90%] rounded-2xl rounded-bl-md border border-white/10 bg-[#121a31] px-4 py-3 text-sm text-slate-100">
@@ -385,7 +385,7 @@ export default function App() {
               {featureCards.map((feature) => (
                 <article
                   key={feature.title}
-                  className="rounded-3xl border border-white/10 bg-white/5 p-8 transition hover:-translate-y-1 hover:border-gene-400/30 hover:bg-white/[0.07]"
+                  className="rounded-3xl border border-white/10 bg-white/5 p-8 transition hover:-translate-y-1 hover:border-jenny-400/30 hover:bg-white/[0.07]"
                 >
                   <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
                   <p className="mt-4 leading-7 text-slate-300">{feature.description}</p>
@@ -407,7 +407,7 @@ export default function App() {
             <div className="mt-12 grid gap-6 lg:grid-cols-3">
               {steps.map((step) => (
                 <article key={step.number} className="rounded-3xl border border-white/10 bg-[#11162a] p-8">
-                  <div className="text-sm font-semibold uppercase tracking-[0.2em] text-gene-300">
+                  <div className="text-sm font-semibold uppercase tracking-[0.2em] text-jenny-300">
                     {step.number}
                   </div>
                   <h3 className="mt-4 text-xl font-semibold text-white">{step.title}</h3>
@@ -507,7 +507,7 @@ export default function App() {
 
         <section id="pricing" className="px-6 py-20 lg:px-8 lg:py-28">
           <div className="mx-auto max-w-7xl">
-            <div className="rounded-[2rem] border border-gene-400/20 bg-gradient-to-br from-gene-500/15 to-white/5 p-8 shadow-[0_20px_80px_rgba(109,124,255,0.15)] lg:p-12">
+            <div className="rounded-[2rem] border border-jenny-400/20 bg-gradient-to-br from-jenny-500/15 to-white/5 p-8 shadow-[0_20px_80px_rgba(109,124,255,0.15)] lg:p-12">
               <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                 <div>
                   <SectionLabel>Start small, scale when ready</SectionLabel>
@@ -521,7 +521,7 @@ export default function App() {
                   <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                     <a
                       href="https://aiassist.net"
-                      className="inline-flex items-center justify-center rounded-full bg-gene-500 px-6 py-3.5 text-base font-semibold text-white transition hover:bg-gene-400"
+                      className="inline-flex items-center justify-center rounded-full bg-jenny-500 px-6 py-3.5 text-base font-semibold text-white transition hover:bg-jenny-400"
                     >
                       Try AiAssist free
                     </a>
@@ -540,7 +540,7 @@ export default function App() {
                 <div className="rounded-3xl border border-white/10 bg-[#11162a] p-8">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gene-300">
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-jenny-300">
                         Early adopter pricing
                       </p>
                       <h3 className="mt-3 text-2xl font-semibold text-white">Simple entry points</h3>
@@ -597,7 +597,7 @@ export default function App() {
         </section>
 
         <section id="final-cta" className="px-6 py-20 lg:px-8 lg:py-28">
-          <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-gene-500/10 p-10 text-center shadow-2xl backdrop-blur-xl lg:p-14">
+          <div className="mx-auto max-w-5xl rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/10 to-jenny-500/10 p-10 text-center shadow-2xl backdrop-blur-xl lg:p-14">
             <SectionLabel>Final CTA</SectionLabel>
             <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">
               Give your team faster support without giving up control
@@ -609,7 +609,7 @@ export default function App() {
             <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
               <a
                 href="https://aiassist.net"
-                className="inline-flex items-center justify-center rounded-full bg-gene-500 px-6 py-3.5 text-base font-semibold text-white transition hover:bg-gene-400"
+                className="inline-flex items-center justify-center rounded-full bg-jenny-500 px-6 py-3.5 text-base font-semibold text-white transition hover:bg-jenny-400"
               >
                 Launch your assistant
               </a>

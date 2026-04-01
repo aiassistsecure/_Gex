@@ -35,10 +35,10 @@ def save_settings(data: dict):
     # Save locally to Gex OS
     SETTINGS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
-    # Sync to the active Gene Workspace if available
-    workspace = os.getenv("GENE_WORKSPACE")
+    # Sync to the active Jenny Workspace if available
+    workspace = os.getenv("JENNY_WORKSPACE")
     if workspace:
-        gene_config_path = Path(workspace) / "gene.config.json"
+        gene_config_path = Path(workspace) / "jenny.config.json"
         if gene_config_path.exists():
             try:
                 gene_data = json.loads(gene_config_path.read_text())

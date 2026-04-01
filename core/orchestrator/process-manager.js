@@ -1,5 +1,5 @@
 /**
- * Gene Process Manager
+ * Jenny Process Manager
  * Spawns, monitors, and manages the Python runtime process.
  * Handles crash recovery with exponential backoff.
  */
@@ -21,8 +21,8 @@ function findPythonExe(resourcesPath) {
 
   // Known candidate paths in priority order
   const candidates = [
-    path.join(pythonDir, 'gene-runtime', `gene-runtime${ext}`), // --onedir --name gene-runtime
-    path.join(pythonDir, `gene-runtime${ext}`),                  // --onefile --name gene-runtime
+    path.join(pythonDir, 'jenny-runtime', `jenny-runtime${ext}`), // --onedir --name jenny-runtime
+    path.join(pythonDir, `jenny-runtime${ext}`),                  // --onefile --name jenny-runtime
     path.join(pythonDir, 'app', `app${ext}`),                    // --onedir default name
     path.join(pythonDir, `app${ext}`),                           // --onefile default name
   ];
@@ -99,7 +99,7 @@ class ProcessManager extends EventEmitter {
       cwd = backendDir || path.join(workspaceDir, 'backend');
     } else {
       // Production: dynamically locate the PyInstaller executable
-      // Searches resources/python/ for gene-runtime.exe, app.exe, or any .exe
+      // Searches resources/python/ for jenny-runtime.exe, app.exe, or any .exe
       cmd = findPythonExe(process.resourcesPath || path.join(__dirname, '..', '..'));
       if (!cmd) {
         this.status = 'crashed';
@@ -119,9 +119,9 @@ class ProcessManager extends EventEmitter {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
-          GENE_PORT: String(pythonPort),
-          GENE_WS_PORT: String(wsPort),
-          GENE_WORKSPACE_DIR: workspaceDir,
+          JENNY_PORT: String(pythonPort),
+          JENNY_WS_PORT: String(wsPort),
+          JENNY_WORKSPACE_DIR: workspaceDir,
           PYTHONUNBUFFERED: '1',
         },
         windowsHide: true,

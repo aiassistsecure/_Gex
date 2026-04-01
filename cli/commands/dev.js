@@ -1,6 +1,6 @@
 /**
- * gene dev
- * Starts Gene in development mode with 4 processes:
+ * jenny dev
+ * Starts Jenny in development mode with 4 processes:
  *   1. YOUR APP's Python backend (uvicorn --reload on :18764)
  *   2. YOUR APP's React frontend (vite on :3000)
  *   3. GEX IDE API (uvicorn --reload on :8000) — Code surgery engine
@@ -20,22 +20,22 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Resolve the Gene framework root (where _Gex_API and _Gex_UI live)
-const GENE_ROOT = path.resolve(__dirname, '..', '..');
+// Resolve the Jenny framework root (where _Gex_API and _Gex_UI live)
+const JENNY_ROOT = path.resolve(__dirname, '..', '..');
 
 export async function dev(options) {
-  console.log(chalk.bold('\n  Gene Dev Mode\n'));
+  console.log(chalk.bold('\n  Jenny Dev Mode\n'));
 
   const cwd = process.cwd();
 
-  // Verify we're in a Gene project
-  if (!fs.existsSync(path.join(cwd, 'gene.config.json'))) {
-    console.error(chalk.red('  Not a Gene project (gene.config.json not found)'));
-    console.log(chalk.gray('  Run `gene create <name>` first, then cd into it.\n'));
+  // Verify we're in a Jenny project
+  if (!fs.existsSync(path.join(cwd, 'jenny.config.json'))) {
+    console.error(chalk.red('  Not a Jenny project (jenny.config.json not found)'));
+    console.log(chalk.gray('  Run `jenny create <name>` first, then cd into it.\n'));
     return;
   }
 
-  const config = JSON.parse(fs.readFileSync(path.join(cwd, 'gene.config.json'), 'utf-8'));
+  const config = JSON.parse(fs.readFileSync(path.join(cwd, 'jenny.config.json'), 'utf-8'));
   const appPort = options.port || config.python?.port || 18764;
   const appDevPort = config.electron?.devPort || 3000;
   const gexApiPort = 8000;
@@ -80,7 +80,7 @@ export async function dev(options) {
   }
 
   // ── 3. GEX IDE API (Code Surgery Engine) ──
-  const gexApiDir = path.join(GENE_ROOT, '_Gex_API');
+  const gexApiDir = path.join(JENNY_ROOT, '_Gex_API');
   if (fs.existsSync(gexApiDir)) {
     const gexPythonExe = await ensureVenv(gexApiDir, 'gex:api', chalk.cyan);
     console.log(chalk.cyan(`  [gex:api]  Starting Gex engine on :${gexApiPort}`));
@@ -93,7 +93,7 @@ export async function dev(options) {
     ], {
       cwd: gexApiDir,
       stdio: 'pipe',
-      env: { ...process.env, PYTHONUNBUFFERED: '1', GENE_WORKSPACE: cwd },
+      env: { ...process.env, PYTHONUNBUFFERED: '1', JENNY_WORKSPACE: cwd },
       shell: true,
     });
     prefixOutput(gexApiProc, 'gex:api', chalk.cyan);
@@ -103,7 +103,7 @@ export async function dev(options) {
   }
 
   // ── 4. GEX IDE UI (Development Environment) ──
-  const gexUiDir = path.join(GENE_ROOT, '_Gex_UI');
+  const gexUiDir = path.join(JENNY_ROOT, '_Gex_UI');
   if (fs.existsSync(gexUiDir)) {
     console.log(chalk.hex('#ff8c42')(`  [gex:ui]   Starting Gex IDE on :${gexUiPort}`));
     const gexUiProc = spawn('npx', ['vite', '--port', String(gexUiPort)], {
@@ -138,9 +138,9 @@ export async function dev(options) {
         stdio: 'pipe',
         env: {
           ...process.env,
-          GENE_DEV: 'true',
-          GENE_DEV_URL: `http://localhost:${gexUiPort}`, // Electron loads Gex IDE
-          GENE_APP_URL: `http://localhost:${appDevPort}`, // Preview connects to app
+          JENNY_DEV: 'true',
+          JENNY_DEV_URL: `http://localhost:${gexUiPort}`, // Electron loads Gex IDE
+          JENNY_APP_URL: `http://localhost:${appDevPort}`, // Preview connects to app
         },
         shell: true,
       });

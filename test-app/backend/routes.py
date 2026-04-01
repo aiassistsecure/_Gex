@@ -14,7 +14,7 @@ async def app_info():
     return {
         "name": "test-app",
         "version": "1.0.0",
-        "framework": "Gene",
+        "framework": "Jenny",
     }
 
 

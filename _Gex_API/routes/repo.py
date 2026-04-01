@@ -154,7 +154,7 @@ async def load_repo(req: LoadRepoRequest):
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
     else:
-        # Local path — allowed when running as Gene IDE
+        # Local path — allowed when running as Jenny IDE
         local = Path(raw_path).resolve()
         if not local.exists() or not local.is_dir():
             raise HTTPException(status_code=404, detail=f"Directory not found: {raw_path}")

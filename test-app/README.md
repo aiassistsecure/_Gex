@@ -1,12 +1,12 @@
 # test-app
 
-> Built with [Gene](https://github.com/gene-framework/gene) 🧬
+> Built with [Jenny](https://github.com/jenny-framework/jenny) 🧬
 
 ## Development
 
 ```bash
 # Start everything at once
-gene dev
+jenny dev
 
 # Or run manually:
 # Terminal 1: Python backend
@@ -16,14 +16,14 @@ cd backend && python -m uvicorn app:app --reload --port 18764
 cd frontend && npm run dev
 
 # Terminal 3: Electron
-GENE_DEV=true npx electron .
+JENNY_DEV=true npx electron .
 ```
 
 ## Build & Package
 
 ```bash
-gene build     # Build Python (PyInstaller) + React (Vite)
-gene package   # Create installer (.exe / .dmg / .AppImage)
+jenny build     # Build Python (PyInstaller) + React (Vite)
+jenny package   # Create installer (.exe / .dmg / .AppImage)
 ```
 
 ## Project Structure
@@ -31,4 +31,4 @@ gene package   # Create installer (.exe / .dmg / .AppImage)
 - `electron/` — Electron main process
 - `frontend/` — React + Tailwind (Vite)
 - `backend/` — Python FastAPI server
-- `gene.config.json` — Gene configuration
+- `jenny.config.json` — Jenny configuration

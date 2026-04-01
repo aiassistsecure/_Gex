@@ -1,6 +1,6 @@
 /**
- * Gene — Preload Script (Framework Core)
- * Exposes window.gene API via contextBridge.
+ * Jenny — Preload Script (Framework Core)
+ * Exposes window.jenny API via contextBridge.
  */
 
 const { contextBridge, ipcRenderer } = require('electron');
@@ -19,7 +19,7 @@ const VALID_LISTEN_CHANNELS = [
   'app:log',
 ];
 
-contextBridge.exposeInMainWorld('gene', {
+contextBridge.exposeInMainWorld('jenny', {
   /**
    * IPC invoke — request/response pattern.
    * @param {string} channel
@@ -50,6 +50,6 @@ contextBridge.exposeInMainWorld('gene', {
    * Platform and environment info.
    */
   platform: process.platform,
-  isDev: process.env.GENE_DEV === 'true',
+  isDev: process.env.JENNY_DEV === 'true',
   version: '1.0.0',
 });

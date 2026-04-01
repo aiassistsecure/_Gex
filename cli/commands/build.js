@@ -1,6 +1,6 @@
 /**
- * gene build
- * Builds the Gene app for production:
+ * jenny build
+ * Builds the Jenny app for production:
  *   1. Bundle Python backend with PyInstaller → standalone executable
  *   2. Build React frontend → static assets
  */
@@ -12,12 +12,12 @@ import path from 'path';
 import fs from 'fs';
 
 export async function build(options) {
-  console.log(chalk.bold('\n🧬 Gene Production Build\n'));
+  console.log(chalk.bold('\n🧬 Jenny Production Build\n'));
 
   const cwd = process.cwd();
 
-  if (!fs.existsSync(path.join(cwd, 'gene.config.json'))) {
-    console.error(chalk.red('Not a Gene project directory'));
+  if (!fs.existsSync(path.join(cwd, 'jenny.config.json'))) {
+    console.error(chalk.red('Not a Jenny project directory'));
     return;
   }
 
@@ -40,11 +40,11 @@ export async function build(options) {
         execSync('pip install pyinstaller', { stdio: 'pipe' });
       }
 
-      // PyInstaller spec for Gene apps
+      // PyInstaller spec for Jenny apps
       const pyinstallerArgs = [
         'pyinstaller',
         '--onedir',
-        '--name', 'gene-runtime',
+        '--name', 'jenny-runtime',
         '--distpath', path.join(cwd, 'backend', 'dist'),
         '--workpath', path.join(cwd, 'backend', 'build'),
         '--specpath', path.join(cwd, 'backend'),
@@ -81,16 +81,16 @@ export async function build(options) {
       });
 
       // Verify output
-      const distDir = path.join(backendDir, 'dist', 'gene-runtime');
-      const exeName = process.platform === 'win32' ? 'gene-runtime.exe' : 'gene-runtime';
+      const distDir = path.join(backendDir, 'dist', 'jenny-runtime');
+      const exeName = process.platform === 'win32' ? 'jenny-runtime.exe' : 'jenny-runtime';
       const exePath = path.join(distDir, exeName);
 
       if (fs.existsSync(exePath)) {
         const stats = fs.statSync(exePath);
         const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
-        spinner.succeed(`Python backend built (${sizeMB}MB) → backend/dist/gene-runtime/`);
+        spinner.succeed(`Python backend built (${sizeMB}MB) → backend/dist/jenny-runtime/`);
       } else {
-        spinner.succeed('Python backend built → backend/dist/gene-runtime/');
+        spinner.succeed('Python backend built → backend/dist/jenny-runtime/');
       }
     } catch (err) {
       spinner.fail(`PyInstaller build failed: ${err.message}`);
@@ -136,7 +136,7 @@ export async function build(options) {
   }
 
   console.log(chalk.bold.green('\n✅ Build complete!\n'));
-  console.log(chalk.gray('  Next step: gene package'));
+  console.log(chalk.gray('  Next step: jenny package'));
   console.log();
 }
 

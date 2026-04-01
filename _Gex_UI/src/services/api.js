@@ -1,7 +1,7 @@
 /**
- * _Gex OS — API Service (Gene Edition)
+ * _Gex OS — API Service (Jenny Edition)
  * All backend communication flows through here.
- * Includes workspace auto-load and Gene CLI actions.
+ * Includes workspace auto-load and Jenny CLI actions.
  */
 
 export const API_BASE = 'http://localhost:8000/api';
@@ -23,7 +23,7 @@ async function request(path, options = {}) {
   return resp.json();
 }
 
-// ── Workspace (Gene integration) ──
+// ── Workspace (Jenny integration) ──
 
 export async function getWorkspace() {
   return request('/workspace');
@@ -136,10 +136,10 @@ export async function deleteCheckpoint(repoPath, checkpointId) {
   });
 }
 
-// ── Gene CLI Actions ──
+// ── Jenny CLI Actions ──
 
 export async function geneCLI(action, cwd = null) {
-  return request('/gene/cli', {
+  return request('/jenny/cli', {
     method: 'POST',
     body: JSON.stringify({ action, cwd }),
   });

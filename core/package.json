@@ -1,11 +1,11 @@
 {
-  "name": "@gene/core",
+  "name": "@jenny/core",
   "version": "1.0.0",
-  "description": "Gene core — Electron shell + Node orchestrator for Python desktop apps",
+  "description": "Jenny core — Electron shell + Node orchestrator for Python desktop apps",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "cross-env GENE_DEV=true electron ."
+    "dev": "cross-env JENNY_DEV=true electron ."
   },
   "dependencies": {
     "electron-updater": "^6.1.7",
@@ -17,8 +17,8 @@
     "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.gene.desktop",
-    "productName": "Gene",
+    "appId": "com.jenny.desktop",
+    "productName": "Jenny",
     "asar": true,
     "asarUnpack": "resources/python/**",
     "extraResources": [

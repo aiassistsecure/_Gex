@@ -1,6 +1,6 @@
 /**
  * BrandingPanel — Let builders customize their app identity before packaging.
- * Writes directly to gene.config.json + package.json in the loaded workspace.
+ * Writes directly to jenny.config.json + package.json in the loaded workspace.
  */
 import { useState, useEffect, useRef } from 'react';
 
@@ -115,7 +115,7 @@ export default function BrandingPanel({ repo }) {
           🎨 App Branding
         </div>
         <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: '3px' }}>
-          Writes to gene.config.json & package.json
+          Writes to jenny.config.json & package.json
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 """
-Branding routes — Read/write app branding config (gene.config.json + package.json).
+Branding routes — Read/write app branding config (jenny.config.json + package.json).
 Handles logo upload/URL fetch and icon resizing via Pillow.
 """
 from fastapi import APIRouter, UploadFile, File, HTTPException
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/branding", tags=["branding"])
 
 
 def get_workspace() -> Optional[Path]:
-    ws = os.getenv("GENE_WORKSPACE")
+    ws = os.getenv("JENNY_WORKSPACE")
     return Path(ws) if ws else None
 
 
@@ -37,45 +37,45 @@ class BrandingUpdate(BaseModel):
 
 @router.get("")
 async def get_branding():
-    """Return merged branding config from gene.config.json + package.json."""
+    """Return merged branding config from jenny.config.json + package.json."""
     ws = get_workspace()
     if not ws:
         return {"error": "No workspace loaded"}
 
-    gene  = load_json(ws / "gene.config.json")
+    jenny  = load_json(ws / "jenny.config.json")
     pkg   = load_json(ws / "package.json")
     build = pkg.get("build", {})
 
     return {
-        "appName":     gene.get("appName", pkg.get("name", "")),
-        "productName": build.get("productName", gene.get("appName", "")),
+        "appName":     jenny.get("appName", pkg.get("name", "")),
+        "productName": build.get("productName", jenny.get("appName", "")),
         "appId":       build.get("appId", ""),
         "version":     pkg.get("version", "1.0.0"),
-        "description": gene.get("description", pkg.get("description", "")),
-        "accentColor": gene.get("theme", {}).get("accent", "#e85d04"),
-        "logoPath":    gene.get("icon", ""),
-        "iconSet":     gene.get("iconSet", False),
+        "description": jenny.get("description", pkg.get("description", "")),
+        "accentColor": jenny.get("theme", {}).get("accent", "#e85d04"),
+        "logoPath":    jenny.get("icon", ""),
+        "iconSet":     jenny.get("iconSet", False),
     }
 
 
 @router.post("")
 async def update_branding(req: BrandingUpdate):
-    """Write branding fields to gene.config.json and package.json."""
+    """Write branding fields to jenny.config.json and package.json."""
     ws = get_workspace()
     if not ws:
         raise HTTPException(400, "No workspace loaded")
 
-    # ── gene.config.json ──────────────────────────────────────────
-    gene = load_json(ws / "gene.config.json")
+    # ── jenny.config.json ──────────────────────────────────────────
+    jenny = load_json(ws / "jenny.config.json")
     if req.appName:
-        gene["appName"] = req.appName
+        jenny["appName"] = req.appName
     if req.description is not None:
-        gene["description"] = req.description
+        jenny["description"] = req.description
     if req.accentColor:
-        gene.setdefault("theme", {})["accent"] = req.accentColor
+        jenny.setdefault("theme", {})["accent"] = req.accentColor
     if req.logoPath is not None:
-        gene["icon"] = req.logoPath
-    save_json(ws / "gene.config.json", gene)
+        jenny["icon"] = req.logoPath
+    save_json(ws / "jenny.config.json", jenny)
 
     # ── package.json ──────────────────────────────────────────────
     pkg = load_json(ws / "package.json")
@@ -115,11 +115,11 @@ async def upload_logo(file: UploadFile = File(...)):
     rel_logo    = str(logo_path.relative_to(ws)).replace("\\", "/")
 
     # Auto-save into config
-    gene = load_json(ws / "gene.config.json")
-    gene["icon"] = rel_logo
+    jenny = load_json(ws / "jenny.config.json")
+    jenny["icon"] = rel_logo
     if icon_result.get("ico"):
-        gene["iconSet"] = True
-    save_json(ws / "gene.config.json", gene)
+        jenny["iconSet"] = True
+    save_json(ws / "jenny.config.json", jenny)
 
     pkg = load_json(ws / "package.json")
     ico = icon_result.get("ico", rel_logo)
@@ -153,10 +153,10 @@ async def logo_from_url(body: dict):
     icon_result = _generate_icons(logo_path, assets_dir)
     rel_logo    = str(logo_path.relative_to(ws)).replace("\\", "/")
 
-    gene = load_json(ws / "gene.config.json")
-    gene["icon"] = rel_logo
-    gene["iconSet"] = bool(icon_result.get("ico"))
-    save_json(ws / "gene.config.json", gene)
+    jenny = load_json(ws / "jenny.config.json")
+    jenny["icon"] = rel_logo
+    jenny["iconSet"] = bool(icon_result.get("ico"))
+    save_json(ws / "jenny.config.json", jenny)
 
     pkg = load_json(ws / "package.json")
     pkg.setdefault("build", {})["icon"] = icon_result.get("ico", rel_logo)

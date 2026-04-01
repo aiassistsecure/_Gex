@@ -1,5 +1,5 @@
 /**
- * Gene Log Aggregator
+ * Jenny Log Aggregator
  * Centralized logging for Python and Electron processes.
  * Writes to rotating log files and provides a stream for the renderer dev console.
  */
@@ -11,7 +11,7 @@ const EventEmitter = require('events');
 class LogAggregator extends EventEmitter {
   constructor(options = {}) {
     super();
-    this.logDir = options.logDir || path.join(process.cwd(), '.gene', 'logs');
+    this.logDir = options.logDir || path.join(process.cwd(), '.jenny', 'logs');
     this.maxFileSize = options.maxFileSize || 5 * 1024 * 1024; // 5MB
     this.maxFiles = options.maxFiles || 5;
     this.buffer = [];
@@ -41,7 +41,7 @@ class LogAggregator extends EventEmitter {
 
     // Write to file
     const line = `[${timestamp}] [${source}] [${level}] ${message}\n`;
-    const logFile = path.join(this.logDir, `gene-${source}.log`);
+    const logFile = path.join(this.logDir, `jenny-${source}.log`);
 
     try {
       fs.appendFileSync(logFile, line);

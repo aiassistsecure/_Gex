@@ -1,5 +1,5 @@
 /**
- * Gene Orchestrator
+ * Jenny Orchestrator
  * Manages Python runtime lifecycle from Node.js.
  */
 
@@ -47,7 +47,7 @@ class Orchestrator extends EventEmitter {
   }
 
   async start() {
-    console.log('🧬 Gene Orchestrator starting...');
+    console.log('🧬 Jenny Orchestrator starting...');
     this.processManager.start();
     const ready = await this.healthMonitor.waitUntilReady();
     if (ready) {
@@ -57,7 +57,7 @@ class Orchestrator extends EventEmitter {
   }
 
   async stop() {
-    console.log('🧬 Gene Orchestrator stopping...');
+    console.log('🧬 Jenny Orchestrator stopping...');
     this.healthMonitor.stopMonitoring();
     this.processManager.stop();
   }

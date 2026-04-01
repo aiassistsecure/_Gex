@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 dist/
 build/
-.gene/
+.jenny/
 .venv/
 venv/
 *.egg-info/
