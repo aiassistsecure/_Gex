@@ -13,6 +13,7 @@ import SettingsPanel from './components/SettingsPanel';
 import TerminalPanel from './components/TerminalPanel';
 import JennyOnboarding from './components/JennyOnboarding';
 import JennyBuildModal from './components/JennyBuildModal';
+import BrandingPanel from './components/BrandingPanel';
 
 export default function App() {
   const { repo, setRepo, addLog, showSettings } = useGexStore();
@@ -267,12 +268,14 @@ export default function App() {
           <div className="sidebar-header">
             <span className="sidebar-title">
               {activeView === 'explorer' && 'Explorer'}
-              {activeView === 'search' && 'Search'}
-              {activeView === 'jenny' && 'Jenny CLI'}
+              {activeView === 'search'   && 'Search'}
+              {activeView === 'jenny'    && 'Jenny CLI'}
+              {activeView === 'branding' && '🎨 Branding'}
             </span>
           </div>
           <div className="sidebar-content">
             {activeView === 'explorer' && <FileTree />}
+            {activeView === 'branding' && <BrandingPanel repo={repo} />}
             {activeView === 'search' && (
               <div style={{ padding: '12px' }}>
                 <input className="input input-sm" placeholder="Search in files..." />

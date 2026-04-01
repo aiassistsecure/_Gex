@@ -2,12 +2,13 @@
  * ActivityBar -- VS Code-style left icon strip
  */
 import useGexStore from '../store/useGexStore';
-import { FolderOpen, Search, Terminal, Settings } from 'lucide-react';
+import { FolderOpen, Search, Terminal, Settings, Palette } from 'lucide-react';
 
 const ITEMS = [
-  { id: 'explorer', label: 'Explorer', Icon: FolderOpen },
-  { id: 'search', label: 'Search', Icon: Search },
-  { id: 'jenny', label: 'Jenny CLI', Icon: Terminal },
+  { id: 'explorer', label: 'Explorer',   Icon: FolderOpen },
+  { id: 'search',   label: 'Search',     Icon: Search },
+  { id: 'jenny',    label: 'Jenny CLI',  Icon: Terminal },
+  { id: 'branding', label: 'Branding',   Icon: Palette },
 ];
 
 export default function ActivityBar({ active, onSelect }) {
