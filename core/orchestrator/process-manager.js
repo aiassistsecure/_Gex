@@ -6,7 +6,61 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const EventEmitter = require('events');
+
+/**
+ * Dynamically locate the Python executable in the packaged resources.
+ * Tries all known PyInstaller output conventions before falling back to a
+ * recursive directory scan — survives naming changes and manual builds.
+ */
+function findPythonExe(resourcesPath) {
+  const pythonDir = path.join(resourcesPath, 'python');
+  const isWin = process.platform === 'win32';
+  const ext = isWin ? '.exe' : '';
+
+  // Known candidate paths in priority order
+  const candidates = [
+    path.join(pythonDir, 'gene-runtime', `gene-runtime${ext}`), // --onedir --name gene-runtime
+    path.join(pythonDir, `gene-runtime${ext}`),                  // --onefile --name gene-runtime
+    path.join(pythonDir, 'app', `app${ext}`),                    // --onedir default name
+    path.join(pythonDir, `app${ext}`),                           // --onefile default name
+  ];
+
+  for (const c of candidates) {
+    if (fs.existsSync(c)) {
+      console.log(`[ProcessManager] Found Python exe: ${c}`);
+      return c;
+    }
+  }
+
+  // Last resort: recursive scan for first executable in python dir
+  const found = findExeRecursive(pythonDir, ext);
+  if (found) {
+    console.log(`[ProcessManager] Discovered Python exe via scan: ${found}`);
+    return found;
+  }
+
+  console.error(`[ProcessManager] No Python executable found in ${pythonDir}`);
+  return null;
+}
+
+function findExeRecursive(dir, ext) {
+  if (!fs.existsSync(dir)) return null;
+  try {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const found = findExeRecursive(full, ext);
+        if (found) return found;
+      } else if (ext ? entry.name.endsWith(ext) : !entry.name.includes('.')) {
+        return full;
+      }
+    }
+  } catch { /* permission errors, skip */ }
+  return null;
+}
+
 
 class ProcessManager extends EventEmitter {
   constructor(options = {}) {
@@ -44,9 +98,14 @@ class ProcessManager extends EventEmitter {
       ];
       cwd = backendDir || path.join(workspaceDir, 'backend');
     } else {
-      // Production: use bundled PyInstaller executable
-      const exeName = process.platform === 'win32' ? 'gene-runtime.exe' : 'gene-runtime';
-      cmd = path.join(process.resourcesPath || '.', 'python', exeName);
+      // Production: dynamically locate the PyInstaller executable
+      // Searches resources/python/ for gene-runtime.exe, app.exe, or any .exe
+      cmd = findPythonExe(process.resourcesPath || path.join(__dirname, '..', '..'));
+      if (!cmd) {
+        this.status = 'crashed';
+        this.emit('crashed', -1);
+        throw new Error('Python executable not found in resources/python/. Run jenny build first.');
+      }
       args = ['--port', String(pythonPort)];
       cwd = workspaceDir;
     }

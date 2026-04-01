@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import './index.css';
 import useGexStore from './store/useGexStore';
 import { loadRepo, getWorkspace, geneCLI, getSettings } from './services/api';
@@ -12,15 +12,19 @@ import CommandPalette from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
 import TerminalPanel from './components/TerminalPanel';
 import JennyOnboarding from './components/JennyOnboarding';
+import JennyBuildModal from './components/JennyBuildModal';
 
 export default function App() {
   const { repo, setRepo, addLog, showSettings } = useGexStore();
-  const [repoPath, setRepoPath]     = useState('');
-  const [loading, setLoading]       = useState(false);
-  const [activeView, setActiveView] = useState('explorer');
+  const [repoPath, setRepoPath]       = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [activeView, setActiveView]   = useState('explorer');
   const [showCommand, setShowCommand] = useState(false);
-  const [cliRunning, setCliRunning] = useState(null);
+  const [cliRunning, setCliRunning]   = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [buildLogs, setBuildLogs]     = useState([]);
+  const [buildStatus, setBuildStatus] = useState('idle'); // idle | running | complete | error
+  const dismissTimer = useRef(null);
 
   // Resizable layout state
   const [sidebarWidth, setSidebarWidth] = useState(240);
@@ -119,27 +123,48 @@ export default function App() {
   }, [repoPath, addLog, setRepo]);
 
   const handleCLI = useCallback(async (action) => {
+    // Reset and show modal
+    setBuildLogs([`[jenny ${action}] Starting...`]);
+    setBuildStatus('running');
     setCliRunning(action);
     addLog(`[jenny ${action}] Starting...`, 'info');
+
     try {
       const result = await geneCLI(action);
+
+      // Stream all stdout lines into the modal
+      if (result.stdout) {
+        const lines = result.stdout.trim().split('\n').filter(l => l.trim());
+        setBuildLogs(prev => [...prev, ...lines]);
+      }
+
       if (result.exit_code === 0) {
+        setBuildStatus('complete');
         addLog(`[jenny ${action}] Complete`, 'success');
-        // Show only the last meaningful line of stdout (skip PyInstaller noise)
-        if (result.stdout) {
-          const lines = result.stdout.trim().split('\n').filter(l => l.trim() && !l.includes('pip install') && !l.includes('Try running') && !l.includes('Make sure'));
-          if (lines.length) addLog(lines[lines.length - 1].trim(), 'dim');
-        }
+        const lastLines = (result.stdout || '').trim().split('\n')
+          .filter(l => l.trim() && !l.includes('pip install') && !l.includes('Try running') && !l.includes('Make sure'));
+        if (lastLines.length) addLog(lastLines[lastLines.length - 1].trim(), 'dim');
       } else {
+        setBuildLogs(prev => [...prev, ...(result.stderr || '').split('\n').filter(l => l.trim())]);
+        setBuildStatus('error');
         addLog(`[jenny ${action}] Failed (exit ${result.exit_code})`, 'error');
         if (result.stderr) addLog(result.stderr.split('\n').filter(l => l.trim()).slice(-3).join(' | '), 'error');
       }
     } catch (err) {
+      setBuildLogs(prev => [...prev, `Error: ${err.message}`]);
+      setBuildStatus('error');
       addLog(`[jenny ${action}] Error: ${err.message}`, 'error');
-    } finally {
-      setCliRunning(null);
     }
+
+    // Auto-dismiss modal after 1.8s on success, 4s on error
+    dismissTimer.current = setTimeout(() => {
+      setCliRunning(null);
+      setBuildStatus('idle');
+    }, buildStatus === 'error' ? 4000 : 1800);
   }, [addLog]);
+
+  // Cleanup timer
+  useEffect(() => () => clearTimeout(dismissTimer.current), []);
 
   return (
     <div className="app-shell">
@@ -147,6 +172,16 @@ export default function App() {
       {showOnboarding && (
         <JennyOnboarding onComplete={() => setShowOnboarding(false)} />
       )}
+
+      {/* Jenny Build/Package Modal — locks UI while CLI runs */}
+      {cliRunning && (
+        <JennyBuildModal
+          action={cliRunning}
+          logs={buildLogs}
+          status={buildStatus}
+        />
+      )}
+
       {/* Title Bar */}
       <header className="titlebar">
         <div className="titlebar-brand">

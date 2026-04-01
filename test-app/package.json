@@ -23,7 +23,7 @@
     "appId": "com.gene.test-app",
     "productName": "test-app",
     "asar": true,
-    "asarUnpack": "resources/python/**",
+    "asarUnpack": ["resources/python/**", "resources/python/gene-runtime/**"],
     "extraResources": [
       {
         "from": "backend/dist/",
