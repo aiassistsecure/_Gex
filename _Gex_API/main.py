@@ -41,9 +41,9 @@ async def lifespan(app: FastAPI):
     # Store Jenny workspace path if provided
     workspace = os.getenv("JENNY_WORKSPACE", "")
     if workspace:
-        app.state.gene_workspace = workspace
+        app.state.jenny_workspace = workspace
     else:
-        app.state.gene_workspace = ""
+        app.state.jenny_workspace = ""
 
     print(f"\n  [*] _Gex OS Backend (Jenny IDE)")
     print(f"  Model: {config.provider}/{config.model}")
@@ -84,7 +84,7 @@ async def root():
         "name": "_Gex OS (Jenny IDE)",
         "version": "1.0.0",
         "status": "running",
-        "workspace": app.state.gene_workspace or None,
+        "workspace": app.state.jenny_workspace or None,
         "docs": "/docs",
     }
 
@@ -92,7 +92,7 @@ async def root():
 @app.get("/api/workspace")
 async def get_workspace():
     """Return the auto-loaded workspace path (set by jenny dev)."""
-    workspace = app.state.gene_workspace
+    workspace = app.state.jenny_workspace
     return {
         "workspace": workspace if workspace else None,
         "exists": bool(workspace and Path(workspace).exists()),
@@ -107,7 +107,7 @@ class GeneCLIRequest(BaseModel):
 @app.post("/api/jenny/cli")
 async def run_gene_cli(req: GeneCLIRequest):
     """Run a Jenny CLI command from the UI."""
-    workspace = req.cwd or app.state.gene_workspace
+    workspace = req.cwd or app.state.jenny_workspace
     if not workspace:
         raise HTTPException(status_code=400, detail="No workspace set")
 

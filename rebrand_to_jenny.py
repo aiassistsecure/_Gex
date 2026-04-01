@@ -27,6 +27,10 @@ SKIP_FILES = {"rebrand_to_jenny.py"}   # don't eat ourselves
 TEXT_REPLACEMENTS = [
     # env vars first (GENE_ prefix)
     (r'\bGENE_',    'JENNY_'),
+    # underscore-compound identifiers (gene_workspace, gene_workspace_dir, etc.)
+    # Must come before \bgene\b because _ is a word char — no boundary matches
+    (r'gene_',      'jenny_'),
+    (r'Gene_',      'Jenny_'),
     # gene.config.json  →  jenny.config.json
     (r'gene\.config\.json', 'jenny.config.json'),
     # gene-runtime  →  jenny-runtime

@@ -3,8 +3,9 @@
  * Writes directly to jenny.config.json + package.json in the loaded workspace.
  */
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE } from '../services/api';
 
-const API = 'http://localhost:18764/api/branding';
+const API = `${API_BASE}/branding`.replace('/api/api', '/api');
 
 const Field = ({ label, hint, children }) => (
   <div style={{ marginBottom: '14px' }}>
