@@ -179,7 +179,7 @@ function CheckIcon({ enabled }) {
       }`}
       aria-hidden="true"
     >
-      {enabled ? 'âœ“' : 'â€”'}
+      {enabled ? '✓' : '—'}
     </span>
   );
 }
@@ -295,8 +295,8 @@ export default function App() {
                     Can I cancel anytime if we start on a paid plan?
                   </div>
                   <div className="max-w-[90%] rounded-2xl rounded-bl-md border border-white/10 bg-[#121a31] px-4 py-3 text-sm text-slate-100">
-                    Draft reply: Yes â€” you can cancel from Dashboard &gt; Account Settings &gt;
-                    Subscription. Youâ€™ll keep access until the end of your billing period.
+                    Draft reply: Yes — you can cancel from Dashboard &gt; Account Settings &gt;
+                    Subscription. You’ll keep access until the end of your billing period.
                   </div>
                   <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/20">
