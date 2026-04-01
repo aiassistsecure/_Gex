@@ -16,15 +16,16 @@ let pythonProcess = null;
 
 // ─── Python Lifecycle ───────────────────────────────────────────
 function startPython() {
+  const ext = process.platform === 'win32' ? '.exe' : '';
   const pythonPath = isDev
     ? 'python'
-    : path.join(process.resourcesPath, 'python', process.platform === 'win32' ? 'app.exe' : 'app');
+    : path.join(process.resourcesPath, 'python', 'jenny', `jenny${ext}`);
 
   const args = isDev
     ? ['-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', String(PYTHON_PORT), '--reload']
     : ['--port', String(PYTHON_PORT)];
 
-  const cwd = isDev ? path.join(__dirname, '..', 'backend') : undefined;
+  const cwd = isDev ? path.join(__dirname, '..', 'backend') : path.join(process.resourcesPath, 'python', 'jenny');
 
   console.log(`🐍 Starting Python: ${pythonPath} ${args.join(' ')}`);
 

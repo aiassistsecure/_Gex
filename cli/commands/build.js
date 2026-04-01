@@ -32,34 +32,19 @@ export async function build(options) {
     }
 
     try {
-      // Resolve Python + PyInstaller from backend venv (preferred) or global
-      const venvScripts = path.join(backendDir, '.venv', 'Scripts');
-      const venvBin     = path.join(backendDir, '.venv', 'bin');
-      let pythonExe     = 'python';
-      let pyinstallerExe = 'pyinstaller';
+      // Resolve venv Python (preferred) or fall back to global
+      const venvPy = [
+        path.join(backendDir, '.venv', 'Scripts', 'python.exe'), // Windows
+        path.join(backendDir, '.venv', 'bin', 'python'),          // Unix
+      ].find(p => fs.existsSync(p)) || 'python';
 
-      if (fs.existsSync(path.join(venvScripts, 'python.exe'))) {
-        pythonExe      = path.join(venvScripts, 'python.exe');
-        pyinstallerExe = path.join(venvScripts, 'pyinstaller.exe');
-      } else if (fs.existsSync(path.join(venvBin, 'python'))) {
-        pythonExe      = path.join(venvBin, 'python');
-        pyinstallerExe = path.join(venvBin, 'pyinstaller');
-      }
-
-      // Ensure PyInstaller is available in the resolved env
+      spinner.text = 'Checking PyInstaller...';
+      // Always run via `python -m PyInstaller` — no pyinstaller.exe path needed
       try {
-        execSync(`"${pyinstallerExe}" --version`, { stdio: 'pipe' });
+        execSync(`"${venvPy}" -m PyInstaller --version`, { stdio: 'pipe' });
       } catch {
         spinner.text = 'Installing PyInstaller into venv...';
-        execSync(`"${pythonExe}" -m pip install pyinstaller`, { stdio: 'pipe' });
-        // Re-resolve after install
-        if (fs.existsSync(path.join(venvScripts, 'pyinstaller.exe'))) {
-          pyinstallerExe = path.join(venvScripts, 'pyinstaller.exe');
-        } else if (fs.existsSync(path.join(venvBin, 'pyinstaller'))) {
-          pyinstallerExe = path.join(venvBin, 'pyinstaller');
-        } else {
-          pyinstallerExe = `"${pythonExe}" -m PyInstaller`;
-        }
+        execSync(`"${venvPy}" -m pip install pyinstaller`, { stdio: 'pipe' });
       }
 
       // Clean old dist to prevent stale exe from previous builds
@@ -68,15 +53,14 @@ export async function build(options) {
         fs.rmSync(oldDist, { recursive: true, force: true });
       }
 
-      // PyInstaller spec for Jenny apps
+      // Build with PyInstaller via python -m PyInstaller
       const pyinstallerArgs = [
-        pyinstallerExe,
+        `"${venvPy}"`, '-m', 'PyInstaller',
         '--onedir',
         '--name', 'jenny',
-        '--distpath', path.join(cwd, 'backend', 'dist'),
-        '--workpath', path.join(cwd, 'backend', 'build'),
-        '--specpath', path.join(cwd, 'backend'),
-        // Exclude heavy unused modules for smaller bundle
+        '--distpath', `"${path.join(cwd, 'backend', 'dist')}"`,
+        '--workpath', `"${path.join(cwd, 'backend', 'build')}"`,
+        '--specpath', `"${path.join(cwd, 'backend')}"`,
         '--exclude-module', 'tkinter',
         '--exclude-module', 'matplotlib',
         '--exclude-module', 'scipy',
@@ -86,7 +70,6 @@ export async function build(options) {
         '--exclude-module', 'cv2',
         '--exclude-module', 'test',
         '--exclude-module', 'unittest',
-        // Hidden imports FastAPI needs
         '--hidden-import', 'uvicorn.logging',
         '--hidden-import', 'uvicorn.loops',
         '--hidden-import', 'uvicorn.loops.auto',
@@ -97,25 +80,22 @@ export async function build(options) {
         '--hidden-import', 'uvicorn.protocols.websockets.auto',
         '--hidden-import', 'uvicorn.lifespan',
         '--hidden-import', 'uvicorn.lifespan.on',
-        // Entry point
         'app.py',
       ];
 
-      spinner.text = 'Running PyInstaller (this may take a minute)...';
+      spinner.text = 'Running PyInstaller (this takes a minute or two)...';
       execSync(pyinstallerArgs.join(' '), {
         cwd: backendDir,
         stdio: 'pipe',
         env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
       });
 
-      // Verify output — fixed canonical path: backend/dist/jenny/jenny[.exe]
       const distDir = path.join(backendDir, 'dist', 'jenny');
       const exeName = process.platform === 'win32' ? 'jenny.exe' : 'jenny';
       const exePath = path.join(distDir, exeName);
 
       if (fs.existsSync(exePath)) {
-        const stats = fs.statSync(exePath);
-        const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
+        const sizeMB = (fs.statSync(exePath).size / (1024 * 1024)).toFixed(1);
         spinner.succeed(`Python backend built (${sizeMB}MB) → backend/dist/jenny/`);
       } else {
         spinner.warn('PyInstaller ran but jenny.exe not found — check backend/dist/');
@@ -125,6 +105,7 @@ export async function build(options) {
       console.log(chalk.gray('\n  Tip: activate your venv or install PyInstaller: pip install pyinstaller'));
       process.exit(1);
     }
+
   }
 
   // ─── Build Frontend ────────────────────────────────────────────
