@@ -20,5 +20,6 @@
   "theme": {
     "accent": "#e85d04"
   },
-  "icon": ""
+  "icon": "assets/logo.png",
+  "iconSet": true
 }
