@@ -40,11 +40,17 @@ export async function build(options) {
         execSync('pip install pyinstaller', { stdio: 'pipe' });
       }
 
+      // Clean old dist to prevent stale exe from previous builds
+      const oldDist = path.join(backendDir, 'dist');
+      if (fs.existsSync(oldDist)) {
+        fs.rmSync(oldDist, { recursive: true, force: true });
+      }
+
       // PyInstaller spec for Jenny apps
       const pyinstallerArgs = [
         'pyinstaller',
         '--onedir',
-        '--name', 'jenny-runtime',
+        '--name', 'jenny',
         '--distpath', path.join(cwd, 'backend', 'dist'),
         '--workpath', path.join(cwd, 'backend', 'build'),
         '--specpath', path.join(cwd, 'backend'),
@@ -80,17 +86,17 @@ export async function build(options) {
         env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
       });
 
-      // Verify output
-      const distDir = path.join(backendDir, 'dist', 'jenny-runtime');
-      const exeName = process.platform === 'win32' ? 'jenny-runtime.exe' : 'jenny-runtime';
+      // Verify output — fixed canonical path: backend/dist/jenny/jenny[.exe]
+      const distDir = path.join(backendDir, 'dist', 'jenny');
+      const exeName = process.platform === 'win32' ? 'jenny.exe' : 'jenny';
       const exePath = path.join(distDir, exeName);
 
       if (fs.existsSync(exePath)) {
         const stats = fs.statSync(exePath);
         const sizeMB = (stats.size / (1024 * 1024)).toFixed(1);
-        spinner.succeed(`Python backend built (${sizeMB}MB) → backend/dist/jenny-runtime/`);
+        spinner.succeed(`Python backend built (${sizeMB}MB) → backend/dist/jenny/`);
       } else {
-        spinner.succeed('Python backend built → backend/dist/jenny-runtime/');
+        spinner.warn('PyInstaller ran but jenny.exe not found — check backend/dist/');
       }
     } catch (err) {
       spinner.fail(`PyInstaller build failed: ${err.message}`);

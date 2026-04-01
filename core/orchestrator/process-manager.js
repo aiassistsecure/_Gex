@@ -19,12 +19,10 @@ function findPythonExe(resourcesPath) {
   const isWin = process.platform === 'win32';
   const ext = isWin ? '.exe' : '';
 
-  // Known candidate paths in priority order
+  // Known candidate paths — matches build.js canonical output: --name jenny --onedir
   const candidates = [
-    path.join(pythonDir, 'jenny-runtime', `jenny-runtime${ext}`), // --onedir --name jenny-runtime
-    path.join(pythonDir, `jenny-runtime${ext}`),                  // --onefile --name jenny-runtime
-    path.join(pythonDir, 'app', `app${ext}`),                    // --onedir default name
-    path.join(pythonDir, `app${ext}`),                           // --onefile default name
+    path.join(pythonDir, 'jenny', `jenny${ext}`),   // --onedir (primary)
+    path.join(pythonDir, `jenny${ext}`),             // --onefile fallback
   ];
 
   for (const c of candidates) {

@@ -1,5 +1,5 @@
 {
-  "appName": "test-app",
+  "appName": "AiAS",
   "python": {
     "port": 18764,
     "wsPort": 18765,
@@ -15,5 +15,10 @@
     "provider": "openai",
     "model": "gpt-5.4"
   },
-  "telemetry": false
+  "telemetry": false,
+  "description": "AiAS",
+  "theme": {
+    "accent": "#e85d04"
+  },
+  "icon": ""
 }

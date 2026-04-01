@@ -2,7 +2,7 @@
   "name": "test-app",
   "version": "1.0.0",
   "private": true,
-  "description": "test-app — A Jenny desktop application",
+  "description": "AiAS",
   "main": "electron/main.js",
   "scripts": {
     "dev": "jenny dev",
@@ -20,25 +20,43 @@
     "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.jenny.test-app",
-    "productName": "test-app",
+    "appId": "com.aiassist.interchained",
+    "productName": "AiAS",
     "asar": true,
-    "asarUnpack": ["resources/python/**", "resources/python/jenny-runtime/**"],
+    "asarUnpack": [
+      "resources/python/**",
+      "resources/python/jenny-runtime/**"
+    ],
     "extraResources": [
       {
         "from": "backend/dist/",
         "to": "python",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "target": [
-        { "target": "nsis",     "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" }
-
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
