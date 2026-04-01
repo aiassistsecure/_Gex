@@ -8,4 +8,6 @@ build/
 venv/
 *.egg-info/
 .env
+*.p12
+*.pfx
 *.spec
